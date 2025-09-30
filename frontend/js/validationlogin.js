@@ -1,4 +1,4 @@
-function validate(form) {
+function validate() {
     with(document.forms.login) {
          if (email.value === "") {
             alert("Please enter a valid Email.")
