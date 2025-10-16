@@ -1,0 +1,26 @@
+{
+  "name": "collaborative_ide",
+  "version": "0.1.0",
+  "description": "Real-Time collaborative IDE for Python",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aleksandrtapinsh/collaborative_ide.git"
+  },
+  "author": "Sasha Tapinsh, Bennet Ripplinger, Grace Lueking, Connor Springer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aleksandrtapinsh/collaborative_ide/issues"
+  },
+  "homepage": "https://github.com/aleksandrtapinsh/collaborative_ide#readme",
+  "dependencies": {
+    "body-parser": "2.2.0",
+    "dotenv": "17.2.3",
+    "express": "^5.1.0"
+  },
+  "type": "module"
+}
