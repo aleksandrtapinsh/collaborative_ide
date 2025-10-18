@@ -30,6 +30,10 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(pagesDirectory, 'loginPage.html'))
 })
 
+app.get('/editor', (req,res) => {
+    res.sendFile(path.join(pagesDirectory, 'editor.html'))
+})
+
 app.post('/signUp', (req, res) => {
     const { username, email, password } = req.body;
     console.log(`Signup attempt with username: ${username} email: ${email}, password: ${password}`)
