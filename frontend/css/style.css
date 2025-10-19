@@ -1,8 +1,8 @@
 .button-class {
-	background-color: #4CAF50;
+	background-color: #819653;
 	/* Green */
 	border: none;
-	color: white;
+	color: #d6d6d6;
 	padding: 10px 20px;
 	text-align: center;
 	text-decoration: none;
@@ -11,4 +11,21 @@
 	margin: 4px 2px;
 	cursor: pointer;
 	border-radius: 4px;
+}
+.button-class:hover {
+	font-weight: bold;
+}
+
+h1 {
+	color: #d6d6d6
+}
+
+body {
+	text-align: center;
+	background-color: #2e2e2e;
+	font-family: monospace;
+}
+
+div {
+	color:#d6d6d6;
 }
