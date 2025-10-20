@@ -45,7 +45,25 @@ app.post('/login', (req, res) => {
     console.log(`Login attempt with email: ${email} and password: ${password}`);
     res.redirect('/');
 })
+
 //Error Handlers
+
+//404
+app.use((req,res,next) => {
+    const err = new Error('Page Not Found');
+    err.status = 404;
+    next(err)
+})
+
+//Generic
+app.use((err,req,res,next) => {
+    console.error(err.stack);
+
+    res.status(err.status || 500 ).json({
+        success: false,
+        message: err.message || 'Internal Server Error',
+    })
+})
 
 //Bootup
 app.listen(app.get('port'), () => {

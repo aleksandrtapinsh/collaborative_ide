@@ -1,52 +1,46 @@
 import request  from "supertest";
-import app from "index.js";
+import app from "./index.js";
 
-// Get Home Page
-describe('GET /', function() {
-    it('should return homepage.html', function(done) {
-        request(app)
-        .get('/')
-        .expect('Content-Type',/html/)
-        .expect(200)
-        .end(done)
+// add routes and pages to this list as they are added to the codebase
+// this list will be used for GET page tests
+const pages = [
+    {route: '/', desc: 'home page'},
+    {route: '/login', desc: 'login page'},
+    {route: '/signUp', desc: 'sign up page'},
+    {route: '/editor', desc: 'editor page'}
+]
+
+// Page Tests
+pages.forEach(({route, desc}) => {
+    describe(`GET ${route}`, function() {
+        it(`should return ${desc}`, function(done) {
+            request(app)
+            .get(route)
+            .expect('Content-Type',/html/)
+            .expect(200)
+            .end(done)
+        })
     })
 })
 
-// Get Login
-describe('GET /login', function() {
-    it('should return loginPage.html', function(done) {
+// Attempt to get nonexistent page.
+describe('GET /nonexistentpage', function() {
+    it('should return a 404 error', function(done) {
         request(app)
-        .get('/login')
-        .expect('Content-Type',/html/)
-        .expect(200)
+        .get('/nonexistentpage')
+        .expect(404)
+        .expect(res => {
+            if(res.body.success !== false) 
+                throw new Error('Expected success: false, got '+res.body.success);
+            if(res.body.message !== 'Page Not Found') 
+                throw new Error('Expected message: Page Not Found, got '+res.body.message);
+        })
         .end(done)
-    })
-})
-
-// Get Sign Up
-describe('GET /signUp', function() {
-    it('should return signUpPage.html', function(done) {
-        request(app)
-        .get('/signUp')
-        .expect('Content-Type',/html/)
-        .expect(200)
-        .end(done)
-    })
-})
-
-// Get Editor
-describe('GET /editor', function() {
-    it('Correct page return', function(done) {
-        request(app)
-        .get('/editor')
-        .expect('Content-Type',/html/)
-        .expect(200)
-        .end(done) 
     })
 })
 
 // Post to Sign Up (Signup Attempt)
-describe('POST /signup', function() {
+describe('POST /signUp', function() {
     it('Valid Input', function(done) {
         request(app)
         .post('/signUp')
@@ -55,6 +49,7 @@ describe('POST /signup', function() {
             email: "collabidetestemail@gmail.com",
             password: "testpassword"
         })
+        .expect('Location', '/')
         .expect(302, done)
     })
 
@@ -86,6 +81,7 @@ describe('POST /login', function() {
             email: "collabidetestemail@gmail.com",
             password: "testpassword"
         })
+        .expect('Location', '/')
         .expect(302, done)
     })
 
@@ -106,5 +102,3 @@ describe('POST /login', function() {
 
     // })
 })
-
-// Generic Error Handling Tests
