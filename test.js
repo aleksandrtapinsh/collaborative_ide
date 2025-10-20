@@ -1,4 +1,4 @@
-import request  from "supertest";
+import request from "supertest";
 import app from "./index.js";
 
 // add routes and pages to this list as they are added to the codebase
