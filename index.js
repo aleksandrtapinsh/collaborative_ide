@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
+import bcrypt from 'bcrypt';
+import mongoose from 'mongoose';
+import User from './models/User.js';
 
 //Configurations
 const app = express()
@@ -12,10 +15,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const pagesDirectory = path.join(__dirname, 'frontend','pages');
 
+mongoose.connect(process.env.MONGODB_URI)
+
+//TEMPORARY UNTIL DATABASE
+
+// const users = []
+
 //Middleware
 app.use(express.static(path.join(__dirname, 'frontend')));
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 
 //Routes
 app.get('/', (req, res) => {
@@ -34,10 +45,22 @@ app.get('/editor', (req,res) => {
     res.sendFile(path.join(pagesDirectory, 'editor.html'))
 })
 
-app.post('/signUp', (req, res) => {
-    const { username, email, password } = req.body;
-    console.log(`Signup attempt with username: ${username} email: ${email}, password: ${password}`)
+app.post('/signUp', async (req, res) => {
+    try{
+    const salt = await bcrypt.genSalt()
+    const hashedPassword = await bcrypt.hash(req.body.password, salt)
+    console.log(salt)
+    console.log(hashedPassword)
+    const user = new User({
+        username: req.body.username,
+        email: req.body.email,
+        password: hashedPassword
+    })
+    await user.save()
     res.redirect('/');
+    } catch {
+        res.status(500).send()
+    }
 })
 
 app.post('/login', (req, res) => {
