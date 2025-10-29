@@ -4,7 +4,8 @@
   "description": "Real-Time collaborative IDE for Python",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "devStart": "nodemon index.js",
+    "test": "mocha",
     "start": "node index.js"
   },
   "repository": {
@@ -18,9 +19,16 @@
   },
   "homepage": "https://github.com/aleksandrtapinsh/collaborative_ide#readme",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "body-parser": "2.2.0",
     "dotenv": "17.2.3",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "mocha": "11.7.4",
+    "mongoose": "^8.19.2",
+    "supertest": "7.1.4"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
 }
