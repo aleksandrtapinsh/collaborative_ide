@@ -1,4 +1,5 @@
 import express from 'express';
+import session from 'express-session'
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -6,6 +7,8 @@ import bodyParser from 'body-parser';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
 import User from './models/User.js';
+import passport from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
 
 //Configurations
 const app = express()
@@ -23,6 +26,53 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(session({
+    secret: '1234',
+    resave: false,
+    saveUninitialized: false,
+}))
+
+app.use(passport.initialize())
+app.use(passport.session())
+
+const testUser = {
+    id: 1,
+    email: 'test@pfw.edu',
+    password: 'test'
+}
+
+// Passport Authentication with Test User Eventually replaced with DB values
+passport.use(new LocalStrategy({ usernameField: 'email' },
+    (email, password, done) => {
+        if (email === testUser.email && password === testUser.password) {
+            return done(null, testUser)
+        }
+        else {
+            return done(null, false, { message: 'Invalid Local Login' })
+        }
+    }
+))
+
+passport.serializeUser((user, done) => {
+    done(null, user.id);
+});
+
+passport.deserializeUser((id, done) => {
+    if (id === testUser.id) {
+        done(null, testUser)
+    }
+    else {
+        done(new Error('User not Found'))
+    }
+})
+
+function checkAuth(req, res, next) {
+    if (req.isAuthenticated()) {
+        return next()
+    }
+    res.redirect('/login')
+}
+
 //Routes
 app.get('/', (req, res) => {
     res.sendFile(path.join(pagesDirectory, 'homePage.html'))
@@ -36,7 +86,7 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(pagesDirectory, 'loginPage.html'))
 })
 
-app.get('/editor', (req, res) => {
+app.get('/editor', checkAuth, (req, res) => {
     res.sendFile(path.join(pagesDirectory, 'editor.html'))
 })
 
@@ -58,11 +108,13 @@ app.post('/signUp', async (req, res) => {
     }
 })
 
-app.post('/login', (req, res) => {
-    const { email, password } = req.body;
-    console.log(`Login attempt with email: ${email} and password: ${password}`);
-    res.redirect('/');
-})
+app.post('/login', (req, res, next) => {
+    console.log('Login Credentials: ', req.body);
+    next();
+}, passport.authenticate('local', {
+    successRedirect: '/editor',
+    failureRedirect: '/login'
+}));
 
 //Error Handlers
 
