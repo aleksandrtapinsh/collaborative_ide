@@ -66,7 +66,7 @@ app.use((err,req,res,next) => {
 })
 
 //Bootup
-app.listen(app.get('port'), () => {
+app.listen(app.get('port'), '127.0.0.1', () => {
   console.log(`Server on port ${app.get('port')}`)
 })
 
