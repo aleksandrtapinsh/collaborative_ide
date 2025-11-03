@@ -4,20 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Collaborative IDE: Sign Up</title>
-
+    <link rel="stylesheet" href="../css/style.css" />
     <script type="text/javascript" src="../js/validation.js"></script>
 </head>
 <body>
     <div style="text-align:center">
         <h1>Sign Up</h1>
-        <form action="" id="signup" method="POST" onsubmit="return validate();">
-            Name: <input name="name" type="text">
+        <form action="signUp" id="signup" method="POST" onsubmit="return validate();">
+            Name: <input name="username" type="text">
             <br><br>
 
             Email: <input name="email" type="email">
             <br><br>
 
-            Password: <input name="password1" type="password"> 
+            Password: <input name="password" type="password"> 
             <br><br>
             Password (again): <input name="password2" type="password">
             <br><br>
@@ -25,7 +25,7 @@
             I agree to the terms and conditions: <input name="agreement" type="checkbox" onclick="document.forms.signup.button.disabled = !document.forms.signup.button.disabled;">
             <br><br>
             
-            <input disabled="disabled" name="button" type="submit" value="Sign Up">
+            <input disabled="disabled" name="button" type="submit" value="Sign Up" class="button-class">
         </form>
     </div>
 </body>
