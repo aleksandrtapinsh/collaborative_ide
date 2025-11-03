@@ -249,13 +249,6 @@ app.use(session({
 app.use(passport.initialize())
 app.use(passport.session())
 
-// Test User
-// const testUser = {
-//     id: 1,
-//     email: 'test@pfw.edu',
-//     password: 'test'
-// }
-
 // Passport Authentication
 passport.use(new LocalStrategy({ usernameField: 'email' },
     (email, password, done) => {
@@ -282,14 +275,6 @@ passport.use(new LocalStrategy({ usernameField: 'email' },
             }
         })
         .catch(err => done(err))
-
-        // Test User Auth
-        // if (email === testUser.email && password === testUser.password) {
-        //     return done(null, testUser)
-        // }
-        // else {
-        //     return done(null, false, { message: 'Invalid Local Login' })
-        // }
     }
 ))
 
