@@ -249,35 +249,46 @@ app.use(session({
 app.use(passport.initialize())
 app.use(passport.session())
 
-const testUser = {
-    id: 1,
-    email: 'test@pfw.edu',
-    password: 'test'
-}
-
-// Passport Authentication with Test User Eventually replaced with DB values
+// Passport Authentication
 passport.use(new LocalStrategy({ usernameField: 'email' },
     (email, password, done) => {
-        if (email === testUser.email && password === testUser.password) {
-            return done(null, testUser)
-        }
-        else {
-            return done(null, false, { message: 'Invalid Local Login' })
-        }
+
+        User.findOne({
+            email: email,
+        })
+        .then(user => {
+            console.log(user)
+            if(user) {
+                bcrypt.compare(password, user.password, (err, matchstate) => {
+                    if(err) {
+                        return done(err);
+                    }
+                    if(matchstate === true) return done(null, user);
+                    else {
+                        console.log('Invalid Local Login');
+                        return done(null, false, { message: 'Invalid Local Login' });
+                    }
+                });
+            } else {
+                console.log('Account Does Not Exist');
+                return done(null, false, { message: 'Account Doesn\'t Exist' });
+            }
+        })
+        .catch(err => done(err))
     }
 ))
 
 passport.serializeUser((user, done) => {
-    done(null, user.id);
+    done(null, user._id);
 });
 
 passport.deserializeUser((id, done) => {
-    if (id === testUser.id) {
-        done(null, testUser)
-    }
-    else {
-        done(new Error('User not Found'))
-    }
+        User.findById(id)
+        .then(user => {
+            if (!user) return done(new Error('User not Found'));
+            done(null, user);
+        })
+        .catch(err => done(err));
 })
 
 function checkAuth(req, res, next) {
