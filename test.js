@@ -6,9 +6,11 @@ import app from "./index.js";
 const pages = [
     {route: '/', desc: 'home page'},
     {route: '/login', desc: 'login page'},
-    {route: '/signUp', desc: 'sign up page'},
-    {route: '/editor', desc: 'editor page'}
+    {route: '/signUp', desc: 'sign up page'}
 ]
+
+const uniquesuffix = Date.now();
+const uniqueEmail = `TestUser_${uniquesuffix}@example.com`
 
 // Page Tests
 pages.forEach(({route, desc}) => {
@@ -16,8 +18,8 @@ pages.forEach(({route, desc}) => {
         it(`should return ${desc}`, function(done) {
             request(app)
             .get(route)
-            .expect('Content-Type',/html/)
             .expect(200)
+            .expect('Content-Type',/html/)
             .end(done)
         })
     })
@@ -45,8 +47,8 @@ describe('POST /signUp', function() {
         request(app)
         .post('/signUp')
         .send({
-            username: "testuser",
-            email: "collabidetestemail@gmail.com",
+            username: `TestUser_${uniquesuffix}`,
+            email: uniqueEmail,
             password: "testpassword"
         })
         .expect('Location', '/')
@@ -57,8 +59,8 @@ describe('POST /signUp', function() {
         request(app)
         .post('/signUp')
         .send({
-            email: "",
-            password: "hello"
+            username: "theemailgoblintookmyemail",
+            password: "help"
         })
         .expect(400,done)
     })
@@ -88,7 +90,18 @@ describe('POST /signUp', function() {
         .post('/signUp')
         .send({
             username: "duplicateuserwithsameemail",
-            email: "collabidetestemail@gmail.com",
+            email: uniqueEmail,
+            password: "testpassword"
+        })
+        .expect(409,done)
+    })
+
+    it('Registered Username', function(done) {
+        request(app)
+        .post('/signUp')
+        .send({
+            username: `TestUser_${uniquesuffix}`,
+            email: "guywhoisntgoodatbeingoriginal@email.com",
             password: "testpassword"
         })
         .expect(409,done)
@@ -102,7 +115,7 @@ describe('POST /login', function() {
         request(app)
         .post('/login')
         .send({
-            email: "collabidetestemail@gmail.com",
+            email: uniqueEmail,
             password: "testpassword"
         })
         .expect('Location', '/editor')
@@ -124,4 +137,37 @@ describe('POST /login', function() {
     // it('Incorrect Password', function(done) {
 
     // })
+})
+
+// Attempt to open Editor
+describe('GET /editor', function() {
+    const agent = request.agent(app);
+
+    before( function(done) {
+            agent
+            .post('/login')
+            .send({
+                email: uniqueEmail,
+                password: 'testpassword'
+            })
+            .expect(302)
+            .expect('Location', '/editor')
+            .end(done);
+        })
+
+    it('Authorized route (Should return editor page)', function(done) {
+        agent
+        .get('/editor')
+        .expect(200)
+        .expect('Content-Type',/html/)
+        .end(done)
+    })
+
+    it('Unauthorized (will return to login page)', function(done) {
+        request(app)
+        .get('/editor')
+        .expect(302)
+        .expect('Location', '/login')
+        .end(done)
+    })
 })
