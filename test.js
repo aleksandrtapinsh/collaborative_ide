@@ -53,22 +53,46 @@ describe('POST /signUp', function() {
         .expect(302, done)
     })
 
-    // Will be set up when login functionality is complete and accounts are saved.
-    // it('No Username', function(done) {
-    
-    // })
+    it('Malformed Request 1', function(done) {
+        request(app)
+        .post('/signUp')
+        .send({
+            email: "",
+            password: "hello"
+        })
+        .expect(400,done)
+    })
 
-    // it('No Email', function(done) {
+        it('Malformed Request 2', function(done) {
+        request(app)
+        .post('/signUp')
+        .send({
+            email: "ihavenousername@email.com",
+            password: "hello"
+        })
+        .expect(400,done)
+    })
 
-    // })
+        it('Malformed Request 3', function(done) {
+        request(app)
+        .post('/signUp')
+        .send({
+            username: "whereismypassword",
+            email: "idonthaveapassword@email.com",
+        })
+        .expect(400,done)
+    })
 
-    // it('No Password', function(done) {
-
-    // })
-
-    // it('Registered Email', function(done) {
-
-    // })
+    it('Registered Email', function(done) {
+        request(app)
+        .post('/signUp')
+        .send({
+            username: "duplicateuserwithsameemail",
+            email: "collabidetestemail@gmail.com",
+            password: "testpassword"
+        })
+        .expect(409,done)
+    })
 })
 
 
@@ -81,11 +105,10 @@ describe('POST /login', function() {
             email: "collabidetestemail@gmail.com",
             password: "testpassword"
         })
-        .expect('Location', '/')
+        .expect('Location', '/editor')
         .expect(302, done)
     })
 
-    // Will be set up when login functionality is complete and accounts are saved.
     // it('No Email', function(done) {
 
     // })
