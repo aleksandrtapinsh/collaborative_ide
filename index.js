@@ -316,21 +316,39 @@ app.get('/editor', checkAuth, (req, res) => {
 })
 
 app.post('/signUp', async (req, res) => {
-    try {
-        const salt = await bcrypt.genSalt()
-        const hashedPassword = await bcrypt.hash(req.body.password, salt)
-        console.log(salt)
-        console.log(hashedPassword)
-        const user = new User({
-            username: req.body.username,
-            email: req.body.email,
-            password: hashedPassword
-        })
-        await user.save()
-        res.redirect('/');
-    } catch {
-        res.status(500).send()
-    }
+    if((req.body.username && req.body.email && req.body.password)
+        && (req.body.username !== "" && req.body.email !== "" && req.body.password !== "")) {
+        try {
+            const salt = await bcrypt.genSalt()
+            const hashedPassword = await bcrypt.hash(req.body.password, salt)
+
+            console.log(salt)
+            console.log(hashedPassword)
+
+            const existinguser = await User.findOne({
+                $or: [ { username: req.body.username }, { email: req.body.email } ]
+            })
+            
+            if(existinguser) {
+                console.log("Username or email already has a registered account")
+                res.status(409).json({message: 'Username or email is already in use'});
+                return;
+            } else {
+                const user = new User({
+                    username: req.body.username,
+                    email: req.body.email,
+                    password: hashedPassword
+                });
+                await user.save();
+                res.redirect('/');
+                return;
+            }
+        } catch {
+            res.status(500).send();
+            return;
+        }}
+    else res.status(400).json({message: 'Bad request: Username, Email, or Password field was empty or missing.'});
+    return;
 })
 
 app.post('/login', (req, res, next) => {
