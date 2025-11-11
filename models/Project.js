@@ -1,4 +1,4 @@
-import mongoose, { model, mongo, Types } from "mongoose";
+import mongoose from "mongoose";
 const { Schema, Types } = mongoose;
 const projectSchema = new Schema({
     name: {type: String},
@@ -7,4 +7,4 @@ const projectSchema = new Schema({
     dateCreated: {type: Date, required: true},
     files: [ {type: Types.ObjectId, ref: 'File'} ]
 });
-export default mongoose.model('Project',projectSchema);
+export default mongoose.model('Project', projectSchema);
