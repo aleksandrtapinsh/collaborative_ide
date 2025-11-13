@@ -418,6 +418,32 @@ app.post('/editor/save', async (req, res) => {
     console.log("File Saved")
 })
 
+app.get('/editor/open/:id', async (req, res) => {
+    try {
+        const project = await Project.findOne({ name: 'test'}).populate('files')
+        const fileName = req.params.id
+
+        console.log(`Looking for ${fileName}`)
+        console.log(`Files in project: ${project.files}`)
+
+        const file = project.files.find(f => f.fname === fileName)
+        if (file) { console.log(`Found: ${file}`)}
+        else { console.log("File not Found")}
+
+        const fileContents = file.contents.toString('utf8')
+        console.log(`File contents: ${fileContents}`)
+
+        res.json({
+            fileName: file.fname,
+            contents: fileContents,
+        })
+    }
+    catch(err) {
+        console.error("Server Error: ", err)
+        res.status(500).json({ error: "Server Error"})
+    }
+})
+
 //404
 app.use((req, res, next) => {
     const err = new Error('Page Not Found');
