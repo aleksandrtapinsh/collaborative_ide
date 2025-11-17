@@ -1,7 +1,7 @@
 // Save File
 document.getElementById("save-btn").addEventListener("click", () => {
     const name = prompt("Enter File Name:")
-    const code = editor.getValue();
+    const code = editor.getValue()
     const projectName = 'test'
     fetch("/editor/save", {
         method: "POST",
@@ -11,8 +11,8 @@ document.getElementById("save-btn").addEventListener("click", () => {
     })
     .then(res => res.json())
     .then(data => console.log("Saved:", data))
-    .catch(err => console.error(err));
-});
+    .catch(err => console.error(err))
+})
 
 // Open File
 document.getElementById("open-btn").addEventListener("click", () => {
@@ -24,10 +24,8 @@ document.getElementById("open-btn").addEventListener("click", () => {
         return res.json()
     })
     .then(data => {
-        console.log("Recieved:", data.fileName)
-        console.log("Contents:", data.contents)
-        const editor = document.getElementById('editor')
-        editor.value = data.contents
+        const editor = ace.edit("editor")
+        editor.session.setValue(data.contents)
     })
     .catch(err => console.error(err))
 })
