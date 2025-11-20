@@ -9,7 +9,7 @@ export const saveFile = async (req, res) => {
         const fileName = req.body.name;
 
         const user = await User.findById(req.user._id).populate("projects");
-        
+
         if (!user) {
             return res.status(401).json({ message: "User not found" });
         }
@@ -52,11 +52,11 @@ export const saveFile = async (req, res) => {
 
         console.log(file);
         project.files.push(file);
-        
+
         await file.save();
         await project.save();
         await user.save();
-        
+
         console.log("File Saved");
         res.json({ success: true, message: "File saved successfully" });
     } catch (error) {
@@ -67,14 +67,23 @@ export const saveFile = async (req, res) => {
 
 export const openFile = async (req, res) => {
     try {
-        const project = await Project.findOne({ name: 'test' }).populate('files');
+        const user = await User.findById(req.user._id).populate("projects");
+
+        if (!user) {
+            return res.status(401).json({ message: "User not found" });
+        }
+
+        const projects = user.projects || [];
+        let project = projects.find(p => p.name === req.query.projectName);
+
+        await project.populate("files")
         const fileName = req.params.id;
 
         console.log(`Looking for ${fileName}`);
         console.log(`Files in project: ${project.files}`);
 
         const file = project.files.find(f => f.fname === fileName);
-        
+
         if (!file) {
             console.log("File not Found");
             return res.status(404).json({ error: "File not found" });
@@ -93,3 +102,53 @@ export const openFile = async (req, res) => {
         res.status(500).json({ error: "Server Error" });
     }
 };
+
+export const newProject = async (req, res) => {
+    try {
+        const projectName = req.body.projectName;
+        const user = await User.findById(req.user._id).populate("projects");
+        if (!user) {
+            return res.status(401).json({ message: "User not found" });
+        }
+        if (!projectName) {
+            return res.status(400).json({ message: "Project name is required" });
+        }
+        const existingProject = user.projects.find(p => p.name === projectName);
+        if (existingProject) {
+            return res.status(400).json({ message: "Project with this name already exists" });
+        }
+        else {
+            const newProject = new Project({
+                name: projectName,
+                owner: user._id,
+                sharedWith: [],
+                dateCreated: new Date(),
+                files: []
+            })
+
+            console.log("Creating new project...")
+            user.projects.push(newProject._id)
+            await newProject.save();
+            await user.save();
+            console.log("Project Created")
+            res.json({ success: true, message: "Project created successfully", project: newProject });
+        }
+    }
+    catch (err) {
+        console.error("Server Error: ", err);
+        res.status(500).json({ error: "Server Error" });
+    }
+}
+
+export const loadProjects = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).populate("projects");
+        if (!user) {
+            return res.status(401).json({ message: "User not found" });
+        }
+        res.json({ projects: user.projects });
+    } catch (err) {
+        console.error("Server Error: ", err);
+        res.status(500).json({ error: "Server Error" });
+    }
+}
