@@ -24,37 +24,37 @@ const __dirname = path.dirname(__filename);
 connectDB();
 
 // Middleware
-app.use(express.static(path.join(__dirname, 'frontend')));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'frontend')))
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: true }))
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 app.use(session({
     secret: process.env.SESSION_SECRET || '1234',
     resave: false,
     saveUninitialized: false,
-}));
+}))
 
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(passport.initialize())
+app.use(passport.session())
 
 // Initialize Passport
-initializePassport(passport);
+initializePassport(passport)
 
 // Initialize Socket.IO
-initializeSocket(server);
+initializeSocket(server)
 
 // Routes
-app.use('/', pageRoutes);
-app.use('/', authRoutes);
-app.use('/editor', editorRoutes);
+app.use('/', pageRoutes)
+app.use('/', authRoutes)
+app.use('/editor', editorRoutes)
 
 // 404 Handler
 app.use((req, res, next) => {
-    const err = new Error('Page Not Found');
-    err.status = 404;
-    next(err);
+    const err = new Error('Page Not Found')
+    err.status = 404
+    next(err)
 });
 
 // Error Handler
@@ -69,7 +69,7 @@ app.use((err, req, res, next) => {
 // Start Server
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-    console.log(`Server on port ${PORT}`);
+    console.log(`Server on port ${PORT}`)
 });
 
-export default app;
+export default app
