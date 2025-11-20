@@ -11,10 +11,10 @@ document.getElementById("save-btn").addEventListener("click", () => {
         credentials: 'include',
         body: JSON.stringify({ code, name, projectName })
     })
-        .then(res => res.json())
-        .then(data => console.log("Saved:", data))
-        .catch(err => console.error(err));
-});
+    .then(res => res.json())
+    .then(data => console.log("Saved:", data))
+    .catch(err => console.error(err))
+})
 
 // Open File
 document.getElementById("open-btn").addEventListener("click", () => {
