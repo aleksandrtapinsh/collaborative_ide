@@ -8,13 +8,9 @@ export const saveFile = async (req, res) => {
         const projectName = req.body.projectName;
         const fileName = req.body.name;
 
-<<<<<<< Updated upstream
-        const user = await User.findById(req.user._id).populate("projects");
-        
-=======
         const user = await User.findById(req.user._id).populate("projects")
 
->>>>>>> Stashed changes
+
         if (!user) {
             return res.status(401).json({ message: "User not found" });
         }
@@ -37,14 +33,10 @@ export const saveFile = async (req, res) => {
 
         console.log(`\nSaving ${fileName} to ${req.user.username}/${projectName}`);
 
-<<<<<<< Updated upstream
-        const files = project.files || [];
-        let file = files.find(f => f.name === fileName);
-=======
         const fileList = await File.find({ projectId: project._id })
         let file = fileList.find(f => f.fname === fileName)
         console.log(`File: ${file}`)
->>>>>>> Stashed changes
+
 
         if (!file) {
             file = new File({
@@ -53,33 +45,16 @@ export const saveFile = async (req, res) => {
                 fname: fileName,
                 extention: "txt",
                 contents: codeBuffer
-<<<<<<< Updated upstream
-            });
-=======
             })
 
             await file.save()
             project.files.push(file._id)
             console.log(`Created new file ${fileName}`)
->>>>>>> Stashed changes
+
         } else {
             if (file.contents !== codeBuffer) {
                 file.contents = codeBuffer;
             }
-<<<<<<< Updated upstream
-            console.log(`File already exists, updated ${fileName}`);
-        }
-
-        console.log(file);
-        project.files.push(file);
-        
-        await file.save();
-        await project.save();
-        await user.save();
-        
-        console.log("File Saved");
-        res.json({ success: true, message: "File saved successfully" });
-=======
             await file.save()
             console.log(`File already exists, updated ${fileName}`)
         }
@@ -91,7 +66,7 @@ export const saveFile = async (req, res) => {
 
         console.log("File Saved")
         res.json({ success: true, message: "File saved successfully" })
->>>>>>> Stashed changes
+
     } catch (error) {
         console.error("Save file error:", error);
         res.status(500).json({ error: "Server Error" });
@@ -100,40 +75,45 @@ export const saveFile = async (req, res) => {
 
 export const openFile = async (req, res) => {
     try {
-        const project = await Project.findOne({ name: 'test' }).populate('files');
-        const fileName = req.params.id;
+        const user = await User.findById(req.user._id).populate("projects")
 
-        console.log(`Looking for ${fileName}`);
-        console.log(`Files in project: ${project.files}`);
-
-<<<<<<< Updated upstream
-        const file = project.files.find(f => f.fname === fileName);
-        
-=======
-        const file = project.files.find(f => f.fname === fileName)
-
->>>>>>> Stashed changes
-        if (!file) {
-            console.log("File not Found");
-            return res.status(404).json({ error: "File not found" });
+        if (!user) {
+            return res.status(401).json({ message: "User not found" })
         }
 
-        console.log(`Found: ${file}`);
-        const fileContents = file.contents.toString('utf8');
-        console.log(`File contents: ${fileContents}`);
+        const projects = user.projects || []
+        let project = projects.find(p => p.name === req.query.projectName)
+
+        if (!project) {
+            return res.status(404).json({ error: "Project not found" })
+        }
+
+        await project.populate("files")
+        const fileName = req.params.id
+
+        console.log(`Looking for ${fileName}`)
+        console.log(`Files in project: ${project.files}`)
+
+        const file = project.files.find(f => f.fname === fileName)
+
+        if (!file) {
+            console.log("File not Found")
+            return res.status(404).json({ error: "File not found" })
+        }
+
+        console.log(`Found: ${file}`)
+        const fileContents = file.contents.toString('utf8')
+        console.log(`File contents: ${fileContents}`)
 
         res.json({
             fileName: file.fname,
             contents: fileContents,
-<<<<<<< Updated upstream
-        });
-=======
         })
     } catch (err) {
         console.error("Server Error: ", err)
         res.status(500).json({ error: "Server Error" })
     }
-};
+}
 
 export const newProject = async (req, res) => {
     try {
@@ -184,14 +164,11 @@ export const loadProjects = async (req, res) => {
             return res.status(401).json({ message: "User not found" });
         }
         res.json({ projects: user.projects });
->>>>>>> Stashed changes
+
     } catch (err) {
         console.error("Server Error: ", err);
         res.status(500).json({ error: "Server Error" });
     }
-<<<<<<< Updated upstream
-};
-=======
 }
 
 export const createFile = async (req, res) => {
@@ -305,4 +282,4 @@ export const deleteProject = async (req, res) => {
         res.status(500).json({ error: "Server Error" });
     }
 }
->>>>>>> Stashed changes
+
