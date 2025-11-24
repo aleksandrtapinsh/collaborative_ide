@@ -7,9 +7,19 @@ export const initializeSocket = (server) => {
     io.on('connection', (socket) => {
         console.log('a user connected');
 
+<<<<<<< Updated upstream
         socket.on('join-editor', (roomId) => {
             socket.join(roomId);
             console.log(`User ${socket.id} joined room ${roomId}`);
+=======
+        socket.on('join-editor', (data) => {
+            const roomId = data.roomId || data
+            const username = data.username || 'Anonymous'
+
+            socket.join(roomId)
+            socket.username = username // Store username on socket
+            console.log(`User ${socket.id} (${username}) joined room ${roomId}`)
+>>>>>>> Stashed changes
 
             const session = editorService.createSession(roomId);
 
@@ -17,8 +27,19 @@ export const initializeSocket = (server) => {
                 content: session.content || '',
                 cursors: session.cursors ? Array.from(session.cursors.entries()) : [],
                 version: session.version
+<<<<<<< Updated upstream
             });
         });
+=======
+            })
+
+            // Notify other users that someone joined
+            socket.to(roomId).emit('user-joined', {
+                socketId: socket.id,
+                username: username
+            })
+        })
+>>>>>>> Stashed changes
 
         socket.on('text-change', (data) => {
             const { roomId, change, clientVersion } = data;
@@ -53,6 +74,7 @@ export const initializeSocket = (server) => {
             if (cursor) {
                 socket.to(roomId).emit('cursor-update', {
                     socketId: socket.id,
+                    username: socket.username || 'Anonymous',
                     position: cursor
                 });
             }
@@ -80,19 +102,39 @@ export const initializeSocket = (server) => {
         });
 
         socket.on('leave-editor', (roomId) => {
+<<<<<<< Updated upstream
             editorService.removeCursor(roomId, socket.id);
             socket.to(roomId).emit('cursor-remove', { socketId: socket.id });
         });
+=======
+            editorService.removeCursor(roomId, socket.id)
+            socket.to(roomId).emit('cursor-remove', {
+                socketId: socket.id,
+                username: socket.username || 'Anonymous'
+            })
+        })
+>>>>>>> Stashed changes
 
         socket.on('disconnect', () => {
             console.log('user disconnected');
             // Remove cursor from all sessions
             editorService.sessions.forEach((session, roomId) => {
+<<<<<<< Updated upstream
                 editorService.removeCursor(roomId, socket.id);
                 socket.to(roomId).emit('cursor-remove', { socketId: socket.id });
             });
         });
     });
+=======
+                editorService.removeCursor(roomId, socket.id)
+                socket.to(roomId).emit('cursor-remove', {
+                    socketId: socket.id,
+                    username: socket.username || 'Anonymous'
+                })
+            })
+        })
+    })
+>>>>>>> Stashed changes
 
     return io;
 };
