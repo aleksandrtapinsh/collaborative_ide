@@ -313,16 +313,8 @@ async function handleSave() {
 socket.on('editor-init', (data) => {
     console.log('Editor initialized with data:', data)
 
-    // Only set content if it's different from current and we don't have a file open
-    // If we have a file open, we trust our local state or the file fetch
-    if (!currentFile) {
-        const currentContent = editor.getValue()
-        if (data.content !== currentContent) {
-            isApplyingRemoteChange = true
-            editor.setValue(data.content, -1)
-            isApplyingRemoteChange = false
-        }
-    }
+    // Don't load any content on init - editor should be blank until user picks a file
+    // We only sync version and cursor information
 
     clientVersion = data.version || 0
     updateSyncStatus(`Synced (v${clientVersion})`)
@@ -360,15 +352,21 @@ socket.on('change-applied', (data) => {
 
 socket.on('force-sync', (data) => {
     console.log('Force sync received:', data)
-    isApplyingRemoteChange = true
 
-    // Save cursor position before sync
-    const cursorPosition = editor.getCursorPosition()
+    // Only sync content if we have a file open
+    if (currentFile) {
+        isApplyingRemoteChange = true
 
-    editor.setValue(data.content || '', -1)
+        // Save cursor position before sync
+        const cursorPosition = editor.getCursorPosition()
 
-    // Restore cursor position after sync
-    editor.moveCursorToPosition(cursorPosition)
+        editor.setValue(data.content || '', -1)
+
+        // Restore cursor position after sync
+        editor.moveCursorToPosition(cursorPosition)
+
+        isApplyingRemoteChange = false
+    }
 
     clientVersion = data.version || 0
     pendingChanges = []
@@ -381,7 +379,6 @@ socket.on('force-sync', (data) => {
         })
     }
 
-    isApplyingRemoteChange = false
     updateSyncStatus(`Synced (v${clientVersion})`)
 })
 
