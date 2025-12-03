@@ -7,9 +7,13 @@ export const initializeSocket = (server) => {
     io.on('connection', (socket) => {
         console.log('a user connected')
 
-        socket.on('join-editor', (roomId) => {
+        socket.on('join-editor', (data) => {
+            const roomId = data.roomId || data
+            const username = data.username || 'Anonymous'
+
             socket.join(roomId)
-            console.log(`User ${socket.id} joined room ${roomId}`)
+            socket.username = username // Store username on socket
+            console.log(`User ${socket.id} (${username}) joined room ${roomId}`)
 
             const session = editorService.createSession(roomId)
 
@@ -17,6 +21,12 @@ export const initializeSocket = (server) => {
                 content: session.content || '',
                 cursors: session.cursors ? Array.from(session.cursors.entries()) : [],
                 version: session.version
+            })
+
+            // Notify other users that someone joined
+            socket.to(roomId).emit('user-joined', {
+                socketId: socket.id,
+                username: username
             })
         })
 
@@ -53,6 +63,7 @@ export const initializeSocket = (server) => {
             if (cursor) {
                 socket.to(roomId).emit('cursor-update', {
                     socketId: socket.id,
+                    username: socket.username || 'Anonymous',
                     position: cursor
                 })
             }
@@ -81,7 +92,10 @@ export const initializeSocket = (server) => {
 
         socket.on('leave-editor', (roomId) => {
             editorService.removeCursor(roomId, socket.id)
-            socket.to(roomId).emit('cursor-remove', { socketId: socket.id })
+            socket.to(roomId).emit('cursor-remove', {
+                socketId: socket.id,
+                username: socket.username || 'Anonymous'
+            })
         })
 
         socket.on('disconnect', () => {
@@ -89,7 +103,10 @@ export const initializeSocket = (server) => {
             // Remove cursor from all sessions
             editorService.sessions.forEach((session, roomId) => {
                 editorService.removeCursor(roomId, socket.id)
-                socket.to(roomId).emit('cursor-remove', { socketId: socket.id })
+                socket.to(roomId).emit('cursor-remove', {
+                    socketId: socket.id,
+                    username: socket.username || 'Anonymous'
+                })
             })
         })
     })

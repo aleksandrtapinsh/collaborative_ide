@@ -1,5 +1,6 @@
 import path from 'path'
 import { fileURLToPath } from 'url'
+import fs from 'fs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -18,5 +19,19 @@ export const getLoginPage = (req, res) => {
 }
 
 export const getEditorPage = (req, res) => {
-    res.sendFile(path.join(pagesDirectory, 'editor.html'))
+    const filePath = path.join(pagesDirectory, 'editor.html')
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).send('Error loading page')
+        }
+
+        const username = req.user?.username || 'Anonymous'
+        const modifiedHtml = data.replace(
+            '</head>',
+            `    <meta name="username" content="${username}">\n</head>`
+        )
+
+        res.send(modifiedHtml)
+    })
 }
