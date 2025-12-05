@@ -1,5 +1,5 @@
 import express from 'express';
-import { saveFile, openFile, newProject, loadProjects, createFile, deleteFile, deleteProject } from '../controllers/editorController.js';
+import { saveFile, openFile, newProject, loadProjects, createFile, deleteFile, deleteProject, execute } from '../controllers/editorController.js';
 import { checkAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -11,5 +11,6 @@ router.post('/create-file', checkAuth, createFile);
 router.delete('/delete-file', checkAuth, deleteFile);
 router.delete('/delete-project', checkAuth, deleteProject);
 router.get('/projects', checkAuth, loadProjects);
+router.post('/execute', checkAuth, execute);
 
 export default router;
