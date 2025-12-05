@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/aleksandrtapinsh/collaborative_ide#readme",
   "dependencies": {
+    "archiver": "^7.0.1",
     "bcrypt": "^6.0.0",
     "body-parser": "2.2.0",
     "dotenv": "17.2.3",

@@ -1,6 +1,10 @@
 import User from '../models/User.js';
 import Project from '../models/Project.js';
 import File from '../models/File.js';
+import * as fsp from 'fs/promises';
+import fs, { rmSync } from 'fs';
+import archiver from 'archiver';
+import { randomUUID } from 'crypto';
 
 export const saveFile = async (req, res) => {
     try {
@@ -283,3 +287,82 @@ export const deleteProject = async (req, res) => {
     }
 }
 
+export const execute = async (req, res) => {
+    const { projectId, fileId } = req.body;
+    const dir = `../temp/${projectId}-${randomUUID()}`
+
+    try{
+        const project = await Project.findById(projectId);
+
+        if(!project) {
+            res.status(404).send("Not Found: Project ID does not exist..");
+            return;
+        }
+
+        const fileList = project.fileList;
+
+        await fsp.mkdir(dir, {recursive: true})
+
+        const output = fs.createWriteStream(`${dir}/output.zip`);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+
+        archive.pipe(output);
+
+        const entrypoint = await File.findOne({ _id: fileId});
+
+        if(!entrypoint) {
+            res.status(404).send("Not Found: Entrypoint File does not exist.")
+            return;
+        }
+        if(!fileList.includes(fileId)) {
+            res.status(400).send("Malformed Request: Entrypoint file is not in given Project")
+            return;
+        }
+
+        for(let i = 0; i < fileList.length; i++) {
+            let fid = fileList[i];
+            let f = await File.findOne({ _id: fid});
+            await fsp.mkdir(`${dir}/${f.dirPath}`, { recursive: true })
+            let filepath = `${dir}/${f.dirPath}${f.fname}.${f.extension}`;
+            await fsp.writeFile(filepath,f.fileContents);
+            archive.file(filepath, {name: `${f.fname}.${f.extension}`})
+        };
+
+        // File is expected to be a .py file
+        await fsp.writeFile(`${dir}/run`,`#!/bin/bash\npython3 ${entrypoint.dirPath}${entrypoint.fname}.${entrypoint.extension}`);
+        archive.file(`${dir}/run`, { name: 'run' });
+
+        await new Promise((resolve, reject) => {
+            archive.finalize();
+            output.on('close', resolve);
+            output.on('error', reject);
+        });
+
+        const filebuffer = await fsp.readFile(`${dir}/output.zip`);
+        const base64str = filebuffer.toString('base64url');
+
+        const tokenpromise = await fetch('http://34.46.207.241:2358/submissions/?base64encoded=true&wait=false',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                language_id: 89,
+                additional_files: base64str,
+                cpu_time_limit: 20,
+                cpu_extra_time: 5
+                })
+            });
+
+        const tokenres = await tokenpromise.json();
+        const token = tokenres.token;
+
+        await fsp.rm(dir, { recursive: true, force: true });
+
+        res.json({ token: token });
+    } catch {
+        res.status(500).send("Internal Server Error: Could not submit to Judge0 API.");
+        await fsp.rm(dir, { recursive: true, force: true });
+    }
+};
