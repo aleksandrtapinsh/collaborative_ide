@@ -1,22 +1,22 @@
-import User from '../models/User.js';
-import Project from '../models/Project.js';
-import File from '../models/File.js';
+import User from '../models/User.js'
+import Project from '../models/Project.js'
+import File from '../models/File.js'
 
 export const saveFile = async (req, res) => {
     try {
-        const codeBuffer = Buffer.from(req.body.code, 'utf-8');
-        const projectName = req.body.projectName;
-        const fileName = req.body.name;
+        const codeBuffer = Buffer.from(req.body.code, 'utf-8')
+        const projectName = req.body.projectName
+        const fileName = req.body.name
 
         const user = await User.findById(req.user._id).populate("projects")
 
 
         if (!user) {
-            return res.status(401).json({ message: "User not found" });
+            return res.status(401).json({ message: "User not found" })
         }
 
-        const projects = user.projects || [];
-        let project = projects.find(p => p.name === projectName);
+        const projects = user.projects || []
+        let project = projects.find(p => p.name === projectName)
 
         if (!project) {
             project = new Project({
@@ -25,13 +25,13 @@ export const saveFile = async (req, res) => {
                 sharedWith: [],
                 dateCreated: new Date(),
                 files: []
-            });
+            })
 
-            user.projects.push(project._id);
-            console.log(`Created project: ${projectName}`);
+            user.projects.push(project._id)
+            console.log(`Created project: ${projectName}`)
         }
 
-        console.log(`\nSaving ${fileName} to ${req.user.username}/${projectName}`);
+        console.log(`\nSaving ${fileName} to ${req.user.username}/${projectName}`)
 
         const fileList = await File.find({ projectId: project._id })
         let file = fileList.find(f => f.fname === fileName)
@@ -41,7 +41,7 @@ export const saveFile = async (req, res) => {
         if (!file) {
             file = new File({
                 projectId: project._id,
-                dirPath: user.username + projectName + "/",
+                dirPath: user.username + "/" + projectName + "/",
                 fname: fileName,
                 extention: "txt",
                 contents: codeBuffer
@@ -53,7 +53,7 @@ export const saveFile = async (req, res) => {
 
         } else {
             if (file.contents !== codeBuffer) {
-                file.contents = codeBuffer;
+                file.contents = codeBuffer
             }
             await file.save()
             console.log(`File already exists, updated ${fileName}`)
@@ -68,10 +68,10 @@ export const saveFile = async (req, res) => {
         res.json({ success: true, message: "File saved successfully" })
 
     } catch (error) {
-        console.error("Save file error:", error);
-        res.status(500).json({ error: "Server Error" });
+        console.error("Save file error:", error)
+        res.status(500).json({ error: "Server Error" })
     }
-};
+}
 
 export const openFile = async (req, res) => {
     try {
@@ -166,8 +166,8 @@ export const loadProjects = async (req, res) => {
         res.json({ projects: user.projects });
 
     } catch (err) {
-        console.error("Server Error: ", err);
-        res.status(500).json({ error: "Server Error" });
+        console.error("Server Error: ", err)
+        res.status(500).json({ error: "Server Error" })
     }
 }
 
