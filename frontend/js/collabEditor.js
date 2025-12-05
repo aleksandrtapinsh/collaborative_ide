@@ -1,6 +1,7 @@
 const socket = io()
-const roomId = 'default-room'
-
+const username = getUsernameFromSession()
+let roomId = username
+let isHost = true
 // Initialize Ace Editor
 const editor = ace.edit("editor")
 editor.setTheme("ace/theme/monokai")
@@ -23,19 +24,43 @@ let pendingChanges = []
 const projectListEl = document.getElementById('project-list')
 const newProjectBtn = document.getElementById('new-project-btn')
 const saveBtn = document.getElementById('save-btn')
-
+const shareSessionBtn = document.getElementById('share-session')
+let projectID = null
+const sharedRoomID = document.querySelector('meta[name="roomID"]')
+const sharedProjectID = document.querySelector('meta[name="projectID"]')
 // Initialize
-function init() {
-    loadProjects()
+async function init() {
+    //Check if user is joining via shared session link
+    const urlParts = window.location.pathname.split('/')
+    if (urlParts.length >= 4 && urlParts[2] === 'session') {
+        projectID = urlParts[4]
+        isHost = false
+    }
+    if (sharedRoomID) {
+        roomId = sharedRoomID.content
+    }
+    await loadProjects()
     setupEventListeners()
 
     // Get username from cookie or session storage
-    const username = getUsernameFromSession()
+    let username = getUsernameFromSession()
 
+    //Check for session projectID in URL
+    let project = projects.find(p => p._id === projectID)
+
+    console.log("Attemping to load files")
+    console.log({ projectID, project })
+    if (!project && projectID && !isHost) {
+        await loadSharedProject(projectID)
+        project = projects.find(p => p._id === projectID)
+    }
+
+    renderProjects()
     // Join editor room with username
     socket.emit('join-editor', {
         roomId: roomId,
-        username: username
+        username: username,
+        projectID: projectID
     })
 }
 
@@ -51,6 +76,7 @@ function getUsernameFromSession() {
 function setupEventListeners() {
     newProjectBtn.addEventListener('click', handleNewProject)
     saveBtn.addEventListener('click', handleSave)
+    shareSessionBtn.addEventListener('click', handleShareSession)
 }
 
 // Project Management
@@ -68,6 +94,49 @@ async function loadProjects() {
     }
 }
 
+async function loadSharedProject(projectID) {
+    console.log('Loading shared project:', projectID)
+
+    try {
+        const response = await fetch(`/editor/project/${projectID}`)
+        const data = await response.json()
+        if (data.projects && data.projects.length > 0) {
+            const shared = data.projects[0]
+            if (!projects.find(p => p._id === shared._id)) {
+                // Map files and convert buffers to strings
+                const files = shared.files.map(file => ({
+                    ...file,
+                    _id: file._id, // temporary ID to avoid conflicts
+                    contents: file.contents
+                        ? file.contents.type === 'Buffer' && Array.isArray(file.contents.data)
+                            ? String.fromCharCode(...file.contents.data)
+                            : file.contents
+                        : '',
+                    shared: true
+                }))
+
+                projects.push({
+                    ...shared,
+                    files,
+                    shared: true
+                })
+
+                renderProjects()
+            }
+
+            // Open the first file automatically
+            if (projects[0].files && projects[0].files.length > 0) {
+                currentProject = projects[0]
+                await openFile(currentProject, currentProject.files[0])
+                socket.emit('request-sync', { roomId, fileID: currentProject.files[0]._id })
+            }
+        }
+
+    }
+    catch (error) {
+        console.error('Error loading shared project:', error)
+    }
+}
 function renderProjects() {
     projectListEl.innerHTML = ''
 
@@ -164,7 +233,7 @@ async function handleNewFile(project) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                projectName: project.name,
+                projectID: project._id,
                 fileName: fileName
             })
         })
@@ -188,7 +257,7 @@ async function handleDeleteFile(project, file) {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                projectName: project.name,
+                projectID: project._id,
                 fileName: file.fname
             })
         })
@@ -219,7 +288,7 @@ async function handleDeleteProject(project) {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                projectName: project.name
+                projectID: project._id
             })
         })
 
@@ -242,35 +311,47 @@ async function handleDeleteProject(project) {
 }
 
 async function openFile(project, file) {
-    console.log('openFile called with:', { project: project.name, file: file.fname })
+    console.log('openFile called with:', { project: project._id, file: file.fname })
     try {
-        const response = await fetch(`/editor/open/${file.fname}?projectName=${project.name}`)
-        const data = await response.json()
+        currentProject = project
+        currentFile = file
+        let content = ''
+        let serverVersion = 0
 
-        console.log('File data received:', data)
+        const isSharedSessionFile = file.contents !== undefined && file.shared === true
 
-        if (data.contents !== undefined) {
-            currentProject = project
-            currentFile = file
-
-            // Update editor content
-            isApplyingRemoteChange = true
-            editor.setValue(data.contents, -1)
-            isApplyingRemoteChange = false
-
-            // Enable editing when file is opened
-            editor.setReadOnly(false)
-
-            // Update UI
-            renderProjects() // To update active state
-
-            // Set mode based on extension
-            const ext = file.fname.split('.').pop()
-            if (ext === 'js') editor.session.setMode("ace/mode/javascript")
-            else if (ext === 'html') editor.session.setMode("ace/mode/html")
-            else if (ext === 'css') editor.session.setMode("ace/mode/css")
-            else editor.session.setMode("ace/mode/python")
+        if (isSharedSessionFile) {
+            if (file.contents?.type === 'Buffer' && Array.isArray(file.contents.data)) {
+                content = String.fromCharCode(...file.contents.data)
+            } else {
+                content = file.contents || ''
+            }
+            serverVersion = file.version ?? 0
+        } else {
+            const response = await fetch(`/editor/open/${file.fname}?projectID=${project._id}`)
+            const data = await response.json()
+            if (data.contents !== undefined) {
+                content = data.contents
+                serverVersion = data.version ?? 0
+            }
         }
+
+        // Apply content to editor
+        isApplyingRemoteChange = true
+        editor.setValue(content, -1)
+        editor.setReadOnly(false)
+        isApplyingRemoteChange = false
+        clientVersion.set(currentFile._id, serverVersion)
+        renderProjects()
+
+        socket.emit('request-sync', { roomId: roomId, fileID: currentFile._id })
+        // Set mode based on extension
+        const ext = file.fname.split('.').pop()
+        if (ext === 'js') editor.session.setMode("ace/mode/javascript")
+        else if (ext === 'html') editor.session.setMode("ace/mode/html")
+        else if (ext === 'css') editor.session.setMode("ace/mode/css")
+        else editor.session.setMode("ace/mode/python")
+
     } catch (error) {
         console.error('Error opening file:', error)
     }
@@ -289,7 +370,7 @@ async function handleSave() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                projectName: currentProject.name,
+                projectID: currentProject._id,
                 name: currentFile.fname,
                 code: content
             })
@@ -309,6 +390,25 @@ async function handleSave() {
     }
 }
 
+function handleShareSession() {
+    if (!currentProject || !currentFile) {
+        alert('No open project to share')
+        return
+    }
+    const projectID = currentProject._id
+    const sessionURL = `${window.location.origin}/editor/session/${roomId}/${projectID}`
+
+    navigator.clipboard.writeText(sessionURL)
+        .then(() => {
+            const originalText = shareSessionBtn.textContent
+            shareSessionBtn.textContent = 'Session Link Copied!'
+            setTimeout(() => shareSessionBtn.textContent = originalText, 2000)
+        })
+        .catch(() => {
+            alert('Failed to copy session link. Please copy it manually: ' + sessionURL + projectID)
+        })
+
+}
 // Socket Events
 socket.on('editor-init', (data) => {
     console.log('Editor initialized with data:', data)
@@ -336,6 +436,7 @@ editor.on('change', (change) => {
 
         socket.emit('text-change', {
             roomId: roomId,
+            fileID: currentFile?._id,
             change: change,
             clientVersion: clientVersion
         })
@@ -351,6 +452,7 @@ socket.on('change-applied', (data) => {
 })
 
 socket.on('force-sync', (data) => {
+    if (data.fileID !== currentFile?._id) return
     console.log('Force sync received:', data)
 
     // Only sync content if we have a file open
@@ -387,6 +489,7 @@ editor.selection.on('changeCursor', () => {
     if (position) {
         socket.emit('cursor-change', {
             roomId: roomId,
+            fileID: currentFile?._id,
             position: position
         })
     }
@@ -396,12 +499,13 @@ editor.selection.on('changeSelection', () => {
     const selection = editor.selection.toJSON()
     socket.emit('selection-change', {
         roomId: roomId,
+        fileID: currentFile?._id,
         selection: selection
     })
 })
 
 socket.on('remote-change', (data) => {
-    if (data.socketId === socket.id || !data.change) return
+    if (data.socketId === socket.id || !data.change || data.fileID !== currentFile?.id) return
 
     isApplyingRemoteChange = true
 
@@ -429,6 +533,7 @@ socket.on('remote-change', (data) => {
 })
 
 socket.on('cursor-update', (data) => {
+    if (data.fileID !== currentFile?._id) return
     if (data.socketId !== socket.id && data.position) {
         addRemoteCursor(data.socketId, { ...data.position, username: data.username })
     }

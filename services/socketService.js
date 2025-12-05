@@ -5,22 +5,28 @@ export const initializeSocket = (server) => {
     const io = new Server(server)
 
     io.on('connection', (socket) => {
+        socket.currentFileID = null
         console.log('a user connected')
 
         socket.on('join-editor', (data) => {
             const roomId = data.roomId || data
+            const fileID = data.fileID || 'default'
             const username = data.username || 'Anonymous'
 
             socket.join(roomId)
             socket.username = username // Store username on socket
+            socket.currentFileID = fileID
             console.log(`User ${socket.id} (${username}) joined room ${roomId}`)
 
-            const session = editorService.createSession(roomId)
-
+            const session = editorService.getSession(roomId) || editorService.createSession(roomId)
+            const fileSession = editorService.getFileSession(roomId, fileID)
+            const fileCursors = Array.from(session.cursors.values())
+                .filter(c => c.fileID === fileID)
+            socket.currentFileVersion = fileSession.version
             socket.emit('editor-init', {
-                content: session.content || '',
-                cursors: session.cursors ? Array.from(session.cursors.entries()) : [],
-                version: session.version
+                content: fileSession.content || '',
+                cursors: fileCursors,
+                version: fileSession.version
             })
 
             // Notify other users that someone joined
@@ -31,8 +37,10 @@ export const initializeSocket = (server) => {
         })
 
         socket.on('text-change', (data) => {
-            const { roomId, change, clientVersion } = data
-            const result = editorService.updateContent(roomId, change, clientVersion)
+            const { roomId, fileID, change, clientVersion } = data
+            socket.currentFileID = fileID
+            const fileSession = editorService.getFileSession(roomId, fileID)
+            const result = editorService.updateContent(roomId, fileID, change, fileSession.version)
 
             if (!result) return
 
@@ -44,11 +52,16 @@ export const initializeSocket = (server) => {
                 })
                 return
             }
-
-            socket.to(roomId).emit('remote-change', {
-                change: change,
-                socketId: socket.id,
-                version: result.session.version
+            // After updating content
+            io.sockets.sockets.forEach((s) => {
+                if (s.currentFileID === fileID && s.id !== socket.id) {
+                    s.emit('remote-change', {
+                        change,
+                        socketId: socket.id,
+                        version: result.session.version,
+                        content: result.session.content
+                    })
+                }
             })
 
             socket.emit('change-applied', {
@@ -57,27 +70,48 @@ export const initializeSocket = (server) => {
         })
 
         socket.on('cursor-change', (data) => {
-            const { roomId, position } = data
-            const cursor = editorService.updateCursor(roomId, socket.id, position)
+            const { roomId, position, fileID } = data
+            socket.currentFileID = fileID
+            const cursor = editorService.updateCursor(roomId, socket.id, position, socket.currentFileID)
 
             if (cursor) {
-                socket.to(roomId).emit('cursor-update', {
-                    socketId: socket.id,
-                    username: socket.username || 'Anonymous',
-                    position: cursor
+                io.sockets.sockets.forEach((s) => {
+                    if (s.currentFileID === fileID && s.id !== socket.id) {
+                        s.emit('cursor-update', {
+                            socketId: socket.id,
+                            username: socket.username || 'Anonymous',
+                            position: cursor
+                        })
+                    }
                 })
             }
         })
-
+        socket.on('switch-file', (data) => {
+            const { roomId, newFileID } = data
+            socket.currentFileID = newFileID
+            const session = editorService.getSession(roomId) || editorService.createSession(roomId)
+            const fileSession = editorService.getFileSession(roomId, newFileID)
+            const fileCursors = Array.from(session.cursors.values())
+                .filter(c => c.fileID === newFileID)
+            socket.currentFileVersion = fileSession.version
+            socket.emit('editor-init', {
+                content: fileSession.content,
+                cursors: fileCursors,
+                version: fileSession.version
+            })
+        })
         socket.on('request-sync', (data) => {
             const { roomId } = data
-            const session = editorService.getSession(roomId)
+            const session = editorService.getSession(roomId) || editorService.createSession(roomId)
+            const fileSession = editorService.getFileSession(roomId, socket.currentFileID)
 
             if (session) {
+                const fileCursors = Array.from(session.cursors.values())
+                    .filter(c => c.fileID === socket.currentFileID)
                 socket.emit('force-sync', {
-                    content: session.content,
-                    version: session.version,
-                    cursors: Array.from(session.cursors.entries())
+                    content: fileSession.content,
+                    version: fileSession.version,
+                    cursors: fileCursors
                 })
             }
         })

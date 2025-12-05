@@ -13,31 +13,46 @@ class EditorSessionService {
                 content: '',
                 cursors: new Map(),
                 version: 0,
-                lastAppliedChange: null
+                lastAppliedChange: null,
+                files: new Map()
             })
         }
         return this.sessions.get(roomId)
     }
 
-    updateContent(roomId, change, clientVersion) {
-        const session = this.getSession(roomId)
-        
-        if (!session) return null
-
-        if (clientVersion !== session.version) {
-            return { conflict: true, session }
+    getFileSession(roomId, fileID) {
+        let session = this.getSession(roomId)
+        if (!session) {
+            session = this.createSession(roomId)  // create if it doesn't exist
         }
-
-        session.content = this.applyChange(session.content, change)
-        session.version++
-        session.lastAppliedChange = change
-
-        return { conflict: false, session }
+        if (!session.files.has(fileID)) {
+            session.files.set(fileID, {
+                content: '',
+                version: 0,
+                lastAppliedChange: null
+            })
+        }
+        return session.files.get(fileID)
     }
 
-    updateCursor(roomId, socketId, position) {
+    updateContent(roomId, fileID, change, clientVersion) {
+        const fileSession = this.getFileSession(roomId, fileID)
+        if (!fileSession) return null
+
+        if (clientVersion !== fileSession.version) {
+            return { conflict: true, session: fileSession }
+        }
+
+        fileSession.content = this.applyChange(fileSession.content, change)
+        fileSession.version++
+        fileSession.lastAppliedChange = change
+
+        return { conflict: false, session: fileSession }
+    }
+
+    updateCursor(roomId, fileID, socketId, position) {
         const session = this.getSession(roomId)
-        
+
         if (!session) return null
 
         if (!session.cursors) {
@@ -47,6 +62,7 @@ class EditorSessionService {
         session.cursors.set(socketId, {
             ...position,
             socketId,
+            fileID,
             color: this.generateColor(socketId),
             lastUpdate: Date.now()
         })
@@ -120,6 +136,8 @@ class EditorSessionService {
     }
 
     generateColor(socketId) {
+        if (!socketId) socketId = Math.random().toString() // fallback
+        socketId = String(socketId) // make sure it's a string
         const colors = [
             '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
             '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
