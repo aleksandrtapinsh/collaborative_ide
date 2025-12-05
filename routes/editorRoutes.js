@@ -2,7 +2,7 @@ import express from 'express';
 import { saveFile, openFile, newProject, loadProjects, loadSharedProject, createFile, deleteFile, deleteProject, loadSharedSession } from '../controllers/editorController.js';
 import { checkAuth } from '../middleware/auth.js';
 
-const router = express.Router();
+const router = express.Router()
 
 router.post('/save', checkAuth, saveFile);
 router.get('/open/:id', checkAuth, openFile);

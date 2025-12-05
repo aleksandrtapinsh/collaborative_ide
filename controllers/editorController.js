@@ -35,7 +35,7 @@ export const saveFile = async (req, res) => {
         if (!file) {
             file = new File({
                 projectId: project._id,
-                dirPath: user.username + project.name + "/",
+                dirPath: user.username + "/" +project.name + "/",
                 fname: fileName,
                 extension: "txt",
                 contents: codeBuffer

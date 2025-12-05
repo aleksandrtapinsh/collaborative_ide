@@ -122,21 +122,47 @@ describe('POST /login', function() {
         .expect(302, done)
     })
 
-    // it('No Email', function(done) {
+    it('No Email', function(done) {
+        request(app)
+        .post('/login')
+        .send({
+            password: "noEmailPassword"
+        })
+        .expect('Location', '/login')
+        .expect(302, done)
+    })
 
-    // })
+    it('No Password', function(done) {
+        request(app)
+        .post('/login')
+        .send({
+            email: uniqueEmail
+        })
+        .expect('Location', '/login')
+        .expect(302, done)
+    })
 
-    // it('No Password', function(done) {
+    it('Unregistered Email', function(done) {
+        request(app)
+        .post('/login')
+        .send({
+            email: 'rueiwojfd@pfw.edu',
+            password: 'test'
+        })
+        .expect('Location', '/login')
+        .expect(302, done)
+    })
 
-    // })
-
-    // it('Unregistered Email', function(done) {
-
-    // })
-
-    // it('Incorrect Password', function(done) {
-
-    // })
+    it('Incorrect Password', function(done) {
+        request(app)
+        .post('/login')
+        .send({
+            email: 'test@pfw.edu',
+            password: 'wrongPassword'
+        })
+        .expect('Location', '/login')
+        .expect(302, done)
+    })
 })
 
 // Attempt to open Editor
