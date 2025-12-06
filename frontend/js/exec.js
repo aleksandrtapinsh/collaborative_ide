@@ -44,6 +44,9 @@ document.getElementById("execute-btn").addEventListener("click", async () => {
                 .then(res => {
                     return res.json();
                 })
+                .then(data => {
+                    return `stdout:\n${data.stdout}\nstderr:${data.stderr}`;
+                })
                 outputwindow.textContent = output;
                 break;
             }
