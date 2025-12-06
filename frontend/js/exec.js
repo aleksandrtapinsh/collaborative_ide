@@ -1,3 +1,7 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 const outputwindow = document.getElementById("output-text")
 
 function sleep(ms) {
@@ -23,25 +27,23 @@ document.getElementById("execute-btn").addEventListener("click", async () => {
         });
 
         const token = tokenres.token;
+        console.log("TOKEN RESPONSE:", tokenres);
         //Poll submission
-        for(let seconds = 0; seconds < 26; seconds++) {
-            outputwindow.textContent = `Waiting for run completion (${26 - seconds} seconds remaining until force stop)`
-            const finishedAt = await fetch(`http://34.46.207.241:2358/submissions/${encodeURIComponent(token)}?base64_encoded=false&fields=finished_at`)
+        for(let seconds = 0; seconds < 21; seconds++) {
+            outputwindow.textContent = `Waiting for run completion (${20 - seconds} seconds remaining until force stop)`
+            const finishedAt = await fetch(`${process.env.JUDGE0_URI}/submissions/${encodeURIComponent(token)}?base64_encoded=false&fields=finished_at`)
             .then(res => {
                 return res.json();
             })
             .then(data => {
-                return data.body.finished_at;
+                return data.finished_at;
             });
 
             if(finishedAt !== null) {
-                const output = await fetch(`http://34.46.207.241:2358/submissions/${encodeURIComponent(token)}?base64_encoded=false&fields=stdout,stderr`)
+                const output = await fetch(`${process.env.JUDGE0_URI}/submissions/${encodeURIComponent(token)}?base64_encoded=false&fields=stdout,stderr`)
                 .then(res => {
                     return res.json();
                 })
-                .then(data => {
-                    return `Output:\n${data.body.stdout}\nError (If it exists):\n${data.body.stderr}`;
-                });
                 outputwindow.textContent = output;
                 break;
             }

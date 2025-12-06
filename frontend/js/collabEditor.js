@@ -334,13 +334,12 @@ async function openFile(project, file) {
                 content = data.contents
                 serverVersion = data.version ?? 0
             }
+            // Save File ID for use by Run button
+            const f = data.fileId;
+            const p = data.projectId
+            document.getElementById("editor").setAttribute('data-file-id',f);
+            document.getElementById("editor").setAttribute('data-project-id',p)
         }
-
-        // Save File ID for use by Run button
-        const f = data.fileId;
-        const p = data.projectId
-        editor.setAttribute('data-file-id',f);
-        editor.setAttribute('data-project-id',p)
 
         // Enable editing when file is opened
         editor.setReadOnly(false)
@@ -362,7 +361,7 @@ async function openFile(project, file) {
         else editor.session.setMode("ace/mode/python")
 
     } catch (error) {
-        console.error('Error opening file:', error)
+        console.error('Error opening file:', error);
     }
 }
 

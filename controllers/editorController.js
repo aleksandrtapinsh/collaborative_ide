@@ -7,6 +7,9 @@ import archiver from 'archiver';
 import { randomUUID } from 'crypto';
 import path from 'path'
 import { fileURLToPath } from 'url'
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export const saveFile = async (req, res) => {
     try {
@@ -315,21 +318,23 @@ export const loadSharedSession = (req, res) => {
 
 export const execute = async (req, res) => {
     const { projectId, fileId } = req.body;
+    console.log(`Executing file ${fileId} from project ${projectId}`)
     const dir = `../temp/${projectId}-${randomUUID()}`
 
     try{
         const project = await Project.findById(projectId);
 
         if(!project) {
-            res.status(404).send("Not Found: Project ID does not exist.");
+            console.log('Project returned null');
+            res.status(404).json( { message: "Not Found: Project ID does not exist." } );
             return;
         }
 
-        const fileList = project.fileList;
+        const fileList = project.files;
 
         await fsp.mkdir(dir, {recursive: true})
 
-        const output = fs.createWriteStream(`${dir}/output.zip`);
+        const output = fs.createWriteStream(`${dir}/source.zip`);
         const archive = archiver('zip', { zlib: { level: 9 } });
 
         archive.pipe(output);
@@ -337,11 +342,13 @@ export const execute = async (req, res) => {
         const entrypoint = await File.findOne({ _id: fileId});
 
         if(!entrypoint) {
-            res.status(404).send("Not Found: Entrypoint File does not exist.")
+            console.log('Entrypoint returned null');
+            res.status(404).json( { message: "Not Found: Entrypoint file does not exist." } );
             return;
         }
         if(!fileList.includes(fileId)) {
-            res.status(400).send("Malformed Request: Entrypoint file is not in given Project")
+            console.log('Request malformed: file is not in project file list');
+            res.status(400).json( { message: "Malformed Request: Entrypoint file is not in given project." } );
             return;
         }
 
@@ -350,7 +357,7 @@ export const execute = async (req, res) => {
             let f = await File.findOne({ _id: fid});
             await fsp.mkdir(`${dir}/${f.dirPath}`, { recursive: true })
             let filepath = `${dir}/${f.dirPath}${f.fname}.${f.extension}`;
-            await fsp.writeFile(filepath,f.fileContents);
+            await fsp.writeFile(filepath,f.contents);
             archive.file(filepath, {name: `${f.fname}.${f.extension}`})
         };
 
@@ -364,10 +371,26 @@ export const execute = async (req, res) => {
             output.on('error', reject);
         });
 
-        const filebuffer = await fsp.readFile(`${dir}/output.zip`);
-        const base64str = filebuffer.toString('base64url');
+        const filebuffer = await fsp.readFile(`${dir}/source.zip`);
+        const base64str = filebuffer.toString('base64');
 
-        const tokenpromise = await fetch('http://34.46.207.241:2358/submissions/?base64encoded=true&wait=false',
+        // Debug: verify zip round-trip before sending
+        const testPath = `${dir}/source.zip`;
+        await fsp.writeFile(testPath, Buffer.from(base64str, 'base64'));
+        const stats = await fsp.stat(testPath);
+        console.log('TEST ZIP SIZE', stats.size);
+        console.log('rawBufferLength:', filebuffer.length);
+        console.log('base64Length:', base64str.length);
+        const payload = {
+            language_id: 89,
+            additional_files: base64str,
+            cpu_time_limit: 15,
+            cpu_extra_time: 5
+        };
+        const payloadText = JSON.stringify(payload);
+        console.log('payloadText length', payloadText.length);
+
+        const tokenpromise = await fetch(`${process.env.JUDGE0_URI}/submissions?wait=false`,
             {
                 method: 'POST',
                 headers: {
@@ -376,19 +399,25 @@ export const execute = async (req, res) => {
                 body: JSON.stringify({
                 language_id: 89,
                 additional_files: base64str,
-                cpu_time_limit: 20,
+                cpu_time_limit: 15,
                 cpu_extra_time: 5
                 })
             });
 
-        const tokenres = await tokenpromise.json();
+        console.log("RAW RESPONSE STATUS:", tokenpromise.status);
+        console.log("RAW RESPONSE HEADERS:", [...tokenpromise.headers.entries()]);
+        const rawText = await tokenpromise.text();
+        console.log("RAW RESPONSE BODY:", rawText);
+        const tokenres = JSON.parse(rawText);
+
         const token = tokenres.token;
 
         await fsp.rm(dir, { recursive: true, force: true });
 
         res.json({ token: token });
-    } catch {
-        res.status(500).send("Internal Server Error: Could not submit to Judge0 API.");
+    } catch(err) {
+        res.status(500).json( { message: "Internal Server Error" } );
+        console.log(err);
         await fsp.rm(dir, { recursive: true, force: true });
     }
 };
