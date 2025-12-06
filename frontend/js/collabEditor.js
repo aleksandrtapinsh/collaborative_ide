@@ -400,7 +400,7 @@ async function handleSave() {
         }
     } catch (error) {
         console.error('Error saving file:', error)
-        alert('Error saving file')
+        alert('Only the project owner can save the file')
     }
 }
 
