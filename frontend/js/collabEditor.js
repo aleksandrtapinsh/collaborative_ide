@@ -45,6 +45,13 @@ async function init() {
     // Get username from cookie or session storage
     let username = getUsernameFromSession()
 
+    if (username !== 'Anonymous') {
+        const loginBtn = document.getElementById('login-btn')
+        if (loginBtn) {
+            loginBtn.style.display = 'none'
+        }
+    }
+
     //Check for session projectID in URL
     let project = projects.find(p => p._id === projectID)
 
