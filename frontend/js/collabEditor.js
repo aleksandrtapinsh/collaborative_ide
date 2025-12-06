@@ -62,6 +62,9 @@ async function init() {
         username: username,
         projectID: projectID
     })
+
+    // Add yourself to the user list
+    updateUserIndicator(socket.id, { username: username + ' (you)' })
 }
 
 function getUsernameFromSession() {
