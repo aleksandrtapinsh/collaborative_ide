@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt'
 import User from '../models/User.js'
+import passport from 'passport'
 
 export const signUp = async (req, res) => {
     const { username, email, password } = req.body
@@ -40,6 +41,18 @@ export const signUp = async (req, res) => {
 
 export const login = (req, res, next) => {
     console.log('Login Credentials: ', req.body)
-    next()
+    passport.authenticate('local', (err, user, info) => {
+        if (err) {
+            return next(err)
+        }
+
+        if (!user) {
+            return res.json({ success: false, message: info.message })
+        }
+        req.logIn(user, (err) => {
+            if (err) return next(err)
+            return res.json({ success: true })
+        })
+    })(req, res, next)
 }
 
