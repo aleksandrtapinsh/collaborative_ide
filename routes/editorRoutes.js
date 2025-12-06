@@ -1,8 +1,8 @@
 import express from 'express';
-import { saveFile, openFile, newProject, loadProjects, createFile, deleteFile, deleteProject, execute } from '../controllers/editorController.js';
+import { saveFile, openFile, newProject, loadProjects, loadSharedProject, createFile, deleteFile, deleteProject, loadSharedSession, execute } from '../controllers/editorController.js';
 import { checkAuth } from '../middleware/auth.js';
 
-const router = express.Router();
+const router = express.Router()
 
 router.post('/save', checkAuth, saveFile);
 router.get('/open/:id', checkAuth, openFile);
@@ -12,5 +12,6 @@ router.delete('/delete-file', checkAuth, deleteFile);
 router.delete('/delete-project', checkAuth, deleteProject);
 router.get('/projects', checkAuth, loadProjects);
 router.post('/execute', checkAuth, execute);
-
+router.get('/project/:projectID', loadSharedProject);
+router.get('/session/:roomID/:projectID', loadSharedSession);
 export default router;
