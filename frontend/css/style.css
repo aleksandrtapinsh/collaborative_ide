@@ -22,6 +22,37 @@ body {
 	flex-direction: column;
 }
 
+.output {
+	width: 100%;
+	height: 275px;
+	background-color: #0a0a0a;
+	border-top: 1px solid #3e3e3e;
+	display: flex;
+	flex-direction: column;
+}
+
+.output-header {
+	width: 100%;
+	height: 20px;
+	font-size: 15px;
+	text-indent: 7px;
+	align-content: center;
+	justify-content: left;
+	align-self: flex-start;
+	background-color: #252526;
+	padding-bottom: 2px;
+	border-bottom: 1px solid #3e3e3e;
+}
+
+.output-text {
+	width: 100%;
+	height: 250px;
+	background-color: #0c0c0c;
+	display: flex;
+	flex-direction: row;
+	overflow-y: auto;
+}
+
 .sidebar-header {
 	padding: 10px;
 	display: flex;
