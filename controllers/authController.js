@@ -1,12 +1,13 @@
 import bcrypt from 'bcrypt'
 import User from '../models/User.js'
+import passport from 'passport'
 
 export const signUp = async (req, res) => {
     const { username, email, password } = req.body
 
     if (!username || !email || !password || username === "" || email === "" || password === "") {
-        return res.status(400).json({ 
-            message: 'Bad request: Username, Email, or Password field was empty or missing.' 
+        return res.status(400).json({
+            message: 'Bad request: Username, Email, or Password field was empty or missing.'
         })
     }
 
@@ -40,6 +41,22 @@ export const signUp = async (req, res) => {
 
 export const login = (req, res, next) => {
     console.log('Login Credentials: ', req.body)
-    next()
+    const { email, password } = req.body;
+
+    passport.authenticate('local', (err, user, info) => {
+        if (err) {
+            return next(err)
+        }
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: "Please enter both username and password" })
+        }
+        if (!user) {
+            return res.status(404).json({ success: false, message: info.message })
+        }
+        req.logIn(user, (err) => {
+            if (err) return next(err)
+            return res.json({ success: true })
+        })
+    })(req, res, next)
 }
 

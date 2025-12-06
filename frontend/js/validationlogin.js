@@ -1,6 +1,7 @@
-function validate() {
-    const signup = document.forms.login
-    const {email, password} = signup
+const login = document.forms.login
+login.addEventListener('submit', async (error) => {
+    error.preventDefault()
+    const { email, password } = login
 
     if (email.value === "") {
         alert("Please enter a valid Email.")
@@ -10,5 +11,16 @@ function validate() {
         alert("Please enter a Password.")
         return false
     }
-    return true
-}
+    const response = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.value, password: password.value })
+    })
+
+    const data = await response.json()
+    if (!data.success) {
+        alert(data.message)  // "Incorrect email or password" or "Account Doesn't Exist"
+    } else {
+        window.location.href = '/editor'
+    }
+})
