@@ -5,8 +5,8 @@ export const signUp = async (req, res) => {
     const { username, email, password } = req.body
 
     if (!username || !email || !password || username === "" || email === "" || password === "") {
-        return res.status(400).json({ 
-            message: 'Bad request: Username, Email, or Password field was empty or missing.' 
+        return res.status(400).json({
+            message: 'Bad request: Username, Email, or Password field was empty or missing.'
         })
     }
 
