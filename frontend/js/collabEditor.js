@@ -258,6 +258,12 @@ async function openFile(project, file) {
             editor.setValue(data.contents, -1)
             isApplyingRemoteChange = false
 
+            // Save File ID for use by Run button
+            const f = data.fileId;
+            const p = data.projectId
+            editor.setAttribute('data-file-id',f);
+            editor.setAttribute('data-project-id',p)
+
             // Enable editing when file is opened
             editor.setReadOnly(false)
 
