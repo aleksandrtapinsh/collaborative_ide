@@ -110,6 +110,8 @@ export const openFile = async (req, res) => {
         console.log(`File contents: ${fileContents}`)
 
         res.json({
+            fileId: file._id,
+            projectId: file.projectId,
             fileName: file.fname,
             contents: fileContents,
         })
@@ -295,7 +297,7 @@ export const execute = async (req, res) => {
         const project = await Project.findById(projectId);
 
         if(!project) {
-            res.status(404).send("Not Found: Project ID does not exist..");
+            res.status(404).send("Not Found: Project ID does not exist.");
             return;
         }
 
