@@ -1,5 +1,5 @@
 import express from 'express';
-import { saveFile, openFile, newProject, loadProjects, loadSharedProject, createFile, deleteFile, deleteProject, loadSharedSession } from '../controllers/editorController.js';
+import { saveFile, openFile, newProject, loadProjects, loadSharedProject, createFile, deleteFile, deleteProject, loadSharedSession, execute } from '../controllers/editorController.js';
 import { checkAuth } from '../middleware/auth.js';
 
 const router = express.Router()
@@ -11,6 +11,7 @@ router.post('/create-file', checkAuth, createFile);
 router.delete('/delete-file', checkAuth, deleteFile);
 router.delete('/delete-project', checkAuth, deleteProject);
 router.get('/projects', checkAuth, loadProjects);
+router.post('/execute', checkAuth, execute);
 router.get('/project/:projectID', loadSharedProject);
 router.get('/session/:roomID/:projectID', loadSharedSession);
 export default router;

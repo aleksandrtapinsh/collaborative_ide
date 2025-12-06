@@ -15,6 +15,7 @@ export const initializeSocket = (server) => {
 
             socket.join(roomId)
             socket.username = username // Store username on socket
+            socket.roomId = roomId // Store roomId on socket
             socket.currentFileID = fileID
             console.log(`User ${socket.id} (${username}) joined room ${roomId}`)
 
@@ -27,6 +28,26 @@ export const initializeSocket = (server) => {
                 content: fileSession.content || '',
                 cursors: fileCursors,
                 version: fileSession.version
+            })
+
+            // Get all users currently in the room
+            const room = io.sockets.adapter.rooms.get(roomId)
+            const existingUsers = []
+            if (room) {
+                room.forEach(socketId => {
+                    const userSocket = io.sockets.sockets.get(socketId)
+                    if (userSocket && userSocket.id !== socket.id) {
+                        existingUsers.push({
+                            socketId: userSocket.id,
+                            username: userSocket.username || 'Anonymous'
+                        })
+                    }
+                })
+            }
+
+            // Send existing users to the new joiner
+            existingUsers.forEach(user => {
+                socket.emit('user-joined', user)
             })
 
             // Notify other users that someone joined

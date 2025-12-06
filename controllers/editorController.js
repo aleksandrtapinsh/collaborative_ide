@@ -1,9 +1,15 @@
-import User from '../models/User.js'
-import Project from '../models/Project.js'
-import File from '../models/File.js'
+import User from '../models/User.js';
+import Project from '../models/Project.js';
+import File from '../models/File.js';
+import * as fsp from 'fs/promises';
+import fs, { rmSync } from 'fs';
+import archiver from 'archiver';
+import { randomUUID } from 'crypto';
 import path from 'path'
 import { fileURLToPath } from 'url'
-import fs from 'fs'
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export const saveFile = async (req, res) => {
     try {
@@ -35,9 +41,9 @@ export const saveFile = async (req, res) => {
         if (!file) {
             file = new File({
                 projectId: project._id,
-                dirPath: user.username + "/" +project.name + "/",
+                dirPath: user.username + "/" + project.name + "/",
                 fname: fileName,
-                extension: "txt",
+                extension: "py",
                 contents: codeBuffer
             })
 
@@ -100,6 +106,8 @@ export const openFile = async (req, res) => {
         console.log(`File contents: ${fileContents}`)
 
         res.json({
+            fileId: file._id,
+            projectId: file.projectId,
             fileName: file.fname,
             contents: fileContents,
             version: file.version || 0
@@ -191,7 +199,7 @@ export const createFile = async (req, res) => {
             projectId: project._id,
             dirPath: user.username + "/" + projectID + "/",
             fname: fileName,
-            extension: fileName.split('.').pop() || "txt",
+            extension: fileName.split('.').pop() || "py",
             contents: Buffer.from("", 'utf-8')
         })
 
@@ -307,6 +315,97 @@ export const loadSharedSession = (req, res) => {
         res.status(500).json({ error: err.message })
     }
 }
+
+export const execute = async (req, res) => {
+    const { projectId, fileId } = req.body;
+    console.log(`Executing file ${fileId} from project ${projectId}`)
+    const dir = `../temp/${projectId}-${randomUUID()}`
+
+    try {
+        const project = await Project.findById(projectId);
+
+        if (!project) {
+            console.log('Project returned null');
+            res.status(404).json({ message: "Not Found: Project ID does not exist." });
+            return;
+        }
+
+        const fileList = project.files;
+        await fsp.mkdir(dir, { recursive: true })
+
+        const output = fs.createWriteStream(`${dir}/source.zip`);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        archive.pipe(output);
+
+        const entrypoint = await File.findOne({ _id: fileId });
+
+        if (!entrypoint) {
+            console.log('Entrypoint returned null');
+            res.status(404).json({ message: "Not Found: Entrypoint file does not exist." });
+            return;
+        }
+
+        // Add all project files to the ZIP at root level
+        for (let i = 0; i < fileList.length; i++) {
+            let fid = fileList[i];
+            let f = await File.findOne({ _id: fid });
+            let filepath = `${dir}/${f.fname}.${f.extension}`;
+            await fsp.writeFile(filepath, f.contents);
+            archive.file(filepath, { name: `${f.fname}.${f.extension}` })
+        }
+
+        // Create run script (no compile needed for Python)
+        const runScript = `#!/bin/bash\npython3 ${entrypoint.fname}.${entrypoint.extension}`;
+        await fsp.writeFile(`${dir}/run`, runScript);
+        archive.file(`${dir}/run`, { name: 'run' });
+
+        await new Promise((resolve, reject) => {
+            archive.finalize();
+            output.on('close', resolve);
+            output.on('error', reject);
+        });
+
+        const filebuffer = await fsp.readFile(`${dir}/source.zip`);
+        const base64str = filebuffer.toString('base64');
+
+        console.log('ZIP file size:', filebuffer.length, 'bytes');
+
+        const tokenpromise = await fetch(`${process.env.JUDGE0_URI}/submissions?base64_encoded=true&wait=false`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    language_id: 89,  // Multi-file program
+                    additional_files: base64str,
+                    cpu_time_limit: 15,
+                    cpu_extra_time: 5
+                })
+            });
+
+        console.log("RAW RESPONSE STATUS:", tokenpromise.status);
+        const rawText = await tokenpromise.text();
+        console.log("RAW RESPONSE BODY:", rawText);
+
+        if (!tokenpromise.ok) {
+            await fsp.rm(dir, { recursive: true, force: true });
+            return res.status(502).json({ error: "Judge0 API error", details: rawText });
+        }
+
+        const tokenres = JSON.parse(rawText);
+        const token = tokenres.token;
+
+        await fsp.rm(dir, { recursive: true, force: true });
+        res.json({ token: token });
+    } catch (err) {
+        res.status(500).json({ message: "Internal Server Error" });
+        console.log(err);
+        try {
+            await fsp.rm(dir, { recursive: true, force: true });
+        } catch { }
+    }
+};
 
 export const loadSharedProject = async (req, res) => {
     const projectID = req.params.projectID

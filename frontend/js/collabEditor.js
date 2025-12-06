@@ -62,6 +62,9 @@ async function init() {
         username: username,
         projectID: projectID
     })
+
+    // Add yourself to the user list
+    updateUserIndicator(socket.id, { username: username + ' (you)' })
 }
 
 function getUsernameFromSession() {
@@ -317,6 +320,8 @@ async function openFile(project, file) {
         currentFile = file
         let content = ''
         let serverVersion = 0
+        let fileId = file._id
+        let projectId = project._id
 
         const isSharedSessionFile = file.contents !== undefined && file.shared === true
 
@@ -333,15 +338,24 @@ async function openFile(project, file) {
             if (data.contents !== undefined) {
                 content = data.contents
                 serverVersion = data.version ?? 0
+                fileId = data.fileId
+                projectId = data.projectId
             }
         }
+
+        // Save File ID for use by Run button
+        document.getElementById("editor").setAttribute('data-file-id', fileId);
+        document.getElementById("editor").setAttribute('data-project-id', projectId)
+
+        // Enable editing when file is opened
+        editor.setReadOnly(false)
 
         // Apply content to editor
         isApplyingRemoteChange = true
         editor.setValue(content, -1)
         editor.setReadOnly(false)
         isApplyingRemoteChange = false
-        clientVersion.set(currentFile._id, serverVersion)
+        clientVersion = serverVersion
         renderProjects()
 
         socket.emit('request-sync', { roomId: roomId, fileID: currentFile._id })
@@ -353,7 +367,7 @@ async function openFile(project, file) {
         else editor.session.setMode("ace/mode/python")
 
     } catch (error) {
-        console.error('Error opening file:', error)
+        console.error('Error opening file:', error);
     }
 }
 
