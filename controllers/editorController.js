@@ -41,9 +41,9 @@ export const saveFile = async (req, res) => {
         if (!file) {
             file = new File({
                 projectId: project._id,
-                dirPath: user.username + "/" +project.name + "/",
+                dirPath: user.username + "/" + project.name + "/",
                 fname: fileName,
-                extension: "txt",
+                extension: "py",
                 contents: codeBuffer
             })
 
@@ -199,7 +199,7 @@ export const createFile = async (req, res) => {
             projectId: project._id,
             dirPath: user.username + "/" + projectID + "/",
             fname: fileName,
-            extension: fileName.split('.').pop() || "txt",
+            extension: fileName.split('.').pop() || "py",
             contents: Buffer.from("", 'utf-8')
         })
 
@@ -321,48 +321,42 @@ export const execute = async (req, res) => {
     console.log(`Executing file ${fileId} from project ${projectId}`)
     const dir = `../temp/${projectId}-${randomUUID()}`
 
-    try{
+    try {
         const project = await Project.findById(projectId);
 
-        if(!project) {
+        if (!project) {
             console.log('Project returned null');
-            res.status(404).json( { message: "Not Found: Project ID does not exist." } );
+            res.status(404).json({ message: "Not Found: Project ID does not exist." });
             return;
         }
 
         const fileList = project.files;
-
-        await fsp.mkdir(dir, {recursive: true})
+        await fsp.mkdir(dir, { recursive: true })
 
         const output = fs.createWriteStream(`${dir}/source.zip`);
         const archive = archiver('zip', { zlib: { level: 9 } });
-
         archive.pipe(output);
 
-        const entrypoint = await File.findOne({ _id: fileId});
+        const entrypoint = await File.findOne({ _id: fileId });
 
-        if(!entrypoint) {
+        if (!entrypoint) {
             console.log('Entrypoint returned null');
-            res.status(404).json( { message: "Not Found: Entrypoint file does not exist." } );
-            return;
-        }
-        if(!fileList.includes(fileId)) {
-            console.log('Request malformed: file is not in project file list');
-            res.status(400).json( { message: "Malformed Request: Entrypoint file is not in given project." } );
+            res.status(404).json({ message: "Not Found: Entrypoint file does not exist." });
             return;
         }
 
-        for(let i = 0; i < fileList.length; i++) {
+        // Add all project files to the ZIP at root level
+        for (let i = 0; i < fileList.length; i++) {
             let fid = fileList[i];
-            let f = await File.findOne({ _id: fid});
-            await fsp.mkdir(`${dir}/${f.dirPath}`, { recursive: true })
-            let filepath = `${dir}/${f.dirPath}${f.fname}.${f.extension}`;
-            await fsp.writeFile(filepath,f.contents);
-            archive.file(filepath, {name: `${f.fname}.${f.extension}`})
-        };
+            let f = await File.findOne({ _id: fid });
+            let filepath = `${dir}/${f.fname}.${f.extension}`;
+            await fsp.writeFile(filepath, f.contents);
+            archive.file(filepath, { name: `${f.fname}.${f.extension}` })
+        }
 
-        // File is expected to be a .py file
-        await fsp.writeFile(`${dir}/run`,`#!/bin/bash\npython3 ${entrypoint.dirPath}${entrypoint.fname}.${entrypoint.extension}`);
+        // Create run script (no compile needed for Python)
+        const runScript = `#!/bin/bash\npython3 ${entrypoint.fname}.${entrypoint.extension}`;
+        await fsp.writeFile(`${dir}/run`, runScript);
         archive.file(`${dir}/run`, { name: 'run' });
 
         await new Promise((resolve, reject) => {
@@ -374,54 +368,45 @@ export const execute = async (req, res) => {
         const filebuffer = await fsp.readFile(`${dir}/source.zip`);
         const base64str = filebuffer.toString('base64');
 
-        // Debug: verify zip round-trip before sending
-        const testPath = `${dir}/source.zip`;
-        await fsp.writeFile(testPath, Buffer.from(base64str, 'base64'));
-        const stats = await fsp.stat(testPath);
-        console.log('TEST ZIP SIZE', stats.size);
-        console.log('rawBufferLength:', filebuffer.length);
-        console.log('base64Length:', base64str.length);
-        const payload = {
-            language_id: 89,
-            additional_files: base64str,
-            cpu_time_limit: 15,
-            cpu_extra_time: 5
-        };
-        const payloadText = JSON.stringify(payload);
-        console.log('payloadText length', payloadText.length);
+        console.log('ZIP file size:', filebuffer.length, 'bytes');
 
-        const tokenpromise = await fetch(`${process.env.JUDGE0_URI}/submissions?wait=false`,
+        const tokenpromise = await fetch(`${process.env.JUDGE0_URI}/submissions?base64_encoded=true&wait=false`,
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                language_id: 89,
-                additional_files: base64str,
-                cpu_time_limit: 15,
-                cpu_extra_time: 5
+                    language_id: 89,  // Multi-file program
+                    additional_files: base64str,
+                    cpu_time_limit: 15,
+                    cpu_extra_time: 5
                 })
             });
 
         console.log("RAW RESPONSE STATUS:", tokenpromise.status);
-        console.log("RAW RESPONSE HEADERS:", [...tokenpromise.headers.entries()]);
         const rawText = await tokenpromise.text();
         console.log("RAW RESPONSE BODY:", rawText);
-        const tokenres = JSON.parse(rawText);
 
+        if (!tokenpromise.ok) {
+            await fsp.rm(dir, { recursive: true, force: true });
+            return res.status(502).json({ error: "Judge0 API error", details: rawText });
+        }
+
+        const tokenres = JSON.parse(rawText);
         const token = tokenres.token;
 
         await fsp.rm(dir, { recursive: true, force: true });
-
         res.json({ token: token });
-    } catch(err) {
-        res.status(500).json( { message: "Internal Server Error" } );
+    } catch (err) {
+        res.status(500).json({ message: "Internal Server Error" });
         console.log(err);
-        await fsp.rm(dir, { recursive: true, force: true });
+        try {
+            await fsp.rm(dir, { recursive: true, force: true });
+        } catch { }
     }
 };
-  
+
 export const loadSharedProject = async (req, res) => {
     const projectID = req.params.projectID
     try {
