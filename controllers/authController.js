@@ -41,13 +41,17 @@ export const signUp = async (req, res) => {
 
 export const login = (req, res, next) => {
     console.log('Login Credentials: ', req.body)
+    const { email, password } = req.body;
+
     passport.authenticate('local', (err, user, info) => {
         if (err) {
             return next(err)
         }
-
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: "Please enter both username and password" })
+        }
         if (!user) {
-            return res.json({ success: false, message: info.message })
+            return res.status(404).json({ success: false, message: info.message })
         }
         req.logIn(user, (err) => {
             if (err) return next(err)

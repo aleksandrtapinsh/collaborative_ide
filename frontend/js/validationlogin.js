@@ -19,7 +19,7 @@ login.addEventListener('submit', async (error) => {
 
     const data = await response.json()
     if (!data.success) {
-        alert(data.message)  // "Invalid Local Login" or "Account Doesn't Exist"
+        alert(data.message)  // "Incorrect email or password" or "Account Doesn't Exist"
     } else {
         window.location.href = '/editor'
     }
