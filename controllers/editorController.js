@@ -349,13 +349,25 @@ export const execute = async (req, res) => {
         for (let i = 0; i < fileList.length; i++) {
             let fid = fileList[i];
             let f = await File.findOne({ _id: fid });
-            let filepath = `${dir}/${f.fname}.${f.extension}`;
+
+            let filename = f.fname;
+            // Auto-append .py if missing extension, to support "helper" -> "helper.py"
+            if (!filename.includes('.')) {
+                filename += '.py';
+            }
+
+            console.log(`Packaging file: ${filename} (Original: ${f.fname})`);
+            let filepath = `${dir}/${filename}`;
             await fsp.writeFile(filepath, f.contents);
-            archive.file(filepath, { name: `${f.fname}.${f.extension}` })
+            archive.file(filepath, { name: filename })
         }
 
         // Create run script (no compile needed for Python)
-        const runScript = `#!/bin/bash\npython3 ${entrypoint.fname}.${entrypoint.extension}`;
+        let entryFilename = entrypoint.fname;
+        if (!entryFilename.includes('.')) {
+            entryFilename += '.py';
+        }
+        const runScript = `#!/bin/bash\npython3 ${entryFilename}`;
         await fsp.writeFile(`${dir}/run`, runScript);
         archive.file(`${dir}/run`, { name: 'run' });
 
