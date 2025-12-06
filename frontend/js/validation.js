@@ -29,17 +29,17 @@ form.addEventListener("submit", async (event) => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username: username.value, email: email.value, password: password.value })
-        });
+        })
 
         if (res.redirected) {
-            alert("Signup successful!");
-            window.location.href = res.url;
+            alert("Signup successful!")
+            window.location.href = res.url
         } else {
-            const data = await res.json();
-            alert(data.message); // backend error
+            const data = await res.json()
+            alert(data.message) // backend error
         }
     } catch (err) {
-        console.error(err);
-        alert("Server error. Please try again.");
+        console.error(err)
+        alert("Server error. Please try again.")
     }
 })
