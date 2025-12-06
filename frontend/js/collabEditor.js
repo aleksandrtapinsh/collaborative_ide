@@ -412,16 +412,56 @@ function handleShareSession() {
     const projectID = currentProject._id
     const sessionURL = `${window.location.origin}/editor/session/${roomId}/${projectID}`
 
-    navigator.clipboard.writeText(sessionURL)
-        .then(() => {
-            const originalText = shareSessionBtn.textContent
-            shareSessionBtn.textContent = 'Session Link Copied!'
-            setTimeout(() => shareSessionBtn.textContent = originalText, 2000)
-        })
-        .catch(() => {
-            alert('Failed to copy session link. Please copy it manually: ' + sessionURL + projectID)
-        })
+    const showSuccess = () => {
+        const originalText = shareSessionBtn.textContent
+        shareSessionBtn.textContent = 'Session Link Copied!'
+        setTimeout(() => shareSessionBtn.textContent = originalText, 2000)
+    }
 
+    const showFailure = (err) => {
+        console.error('Copy failed:', err)
+        alert('Failed to copy session link. Please copy it manually: ' + sessionURL)
+    }
+
+    // Try modern API first (HTTPS)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(sessionURL)
+            .then(showSuccess)
+            .catch((err) => {
+                // If modern API fails (e.g. permissions), try fallback
+                fallbackCopyTextToClipboard(sessionURL, showSuccess, showFailure)
+            })
+    } else {
+        // Fallback for HTTP
+        fallbackCopyTextToClipboard(sessionURL, showSuccess, showFailure)
+    }
+}
+
+function fallbackCopyTextToClipboard(text, onSuccess, onFailure) {
+    try {
+        const textArea = document.createElement("textarea")
+        textArea.value = text
+
+        // Ensure it's not visible but part of DOM
+        textArea.style.position = "fixed"
+        textArea.style.left = "-9999px"
+        textArea.style.top = "0"
+        document.body.appendChild(textArea)
+
+        textArea.focus()
+        textArea.select()
+
+        const successful = document.execCommand('copy')
+        document.body.removeChild(textArea)
+
+        if (successful) {
+            onSuccess()
+        } else {
+            onFailure(new Error('execCommand returned false'))
+        }
+    } catch (err) {
+        onFailure(err)
+    }
 }
 // Socket Events
 socket.on('editor-init', (data) => {
