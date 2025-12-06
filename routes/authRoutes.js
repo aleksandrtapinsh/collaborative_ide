@@ -5,9 +5,6 @@ import { signUp, login } from '../controllers/authController.js'
 const router = express.Router()
 
 router.post('/signUp', signUp)
-router.post('/login', login, passport.authenticate('local', {
-    successRedirect: '/editor',
-    failureRedirect: '/login'
-}))
+router.post('/login', login)
 
 export default router

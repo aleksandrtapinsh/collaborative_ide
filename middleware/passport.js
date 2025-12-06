@@ -8,19 +8,19 @@ export const initializePassport = (passport) => {
         async (email, password, done) => {
             try {
                 const user = await User.findOne({ email })
-                
+
                 if (!user) {
                     console.log('Account Does Not Exist')
                     return done(null, false, { message: 'Account Doesn\'t Exist' })
                 }
 
                 const matchstate = await bcrypt.compare(password, user.password)
-                
+
                 if (matchstate) {
                     return done(null, user)
                 } else {
                     console.log('Invalid Local Login')
-                    return done(null, false, { message: 'Invalid Local Login' })
+                    return done(null, false, { message: 'Incorrect email or password' })
                 }
             } catch (err) {
                 return done(err)
