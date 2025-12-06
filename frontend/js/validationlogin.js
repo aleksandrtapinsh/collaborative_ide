@@ -1,6 +1,6 @@
 function validate() {
-    const signup = document.forms.login
-    const {email, password} = signup
+    const login = document.forms.login
+    const { email, password } = login
 
     if (email.value === "") {
         alert("Please enter a valid Email.")
