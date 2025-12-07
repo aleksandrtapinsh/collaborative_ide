@@ -11,7 +11,7 @@ router.post('/create-file', checkAuth, createFile);
 router.delete('/delete-file', checkAuth, deleteFile);
 router.delete('/delete-project', checkAuth, deleteProject);
 router.get('/projects', checkAuth, loadProjects);
-router.post('/execute', checkAuth, execute);
+router.post('/execute', execute);
 router.get('/project/:projectID', loadSharedProject);
 router.get('/session/:roomID/:projectID', loadSharedSession);
 export default router;
