@@ -24,12 +24,13 @@ document.getElementById("execute-btn").addEventListener("click", async () => {
 
         const token = tokenres.token;
         console.log("TOKEN RESPONSE:", tokenres);
+        const judge0Uri = document.querySelector('meta[name="judge0-uri"]').content;
         //Poll submission
         for (let seconds = 0; seconds < 21; seconds++) {
             outputwindow.textContent = `Waiting for run completion (${20 - seconds} seconds remaining until force stop)`
 
             try {
-                const statusResponse = await fetch(`http://34.46.207.241:2358/submissions/${encodeURIComponent(token)}?base64_encoded=false&fields=finished_at`);
+                const statusResponse = await fetch(`${judge0Uri}/submissions/${encodeURIComponent(token)}?base64_encoded=false&fields=finished_at`);
                 const statusText = await statusResponse.text();
 
                 if (!statusText || statusText.trim() === '') {
@@ -42,7 +43,7 @@ document.getElementById("execute-btn").addEventListener("click", async () => {
                 const finishedAt = statusData.finished_at;
 
                 if (finishedAt !== null) {
-                    const outputResponse = await fetch(`http://34.46.207.241:2358/submissions/${encodeURIComponent(token)}?base64_encoded=false&fields=stdout,stderr`);
+                    const outputResponse = await fetch(`${judge0Uri}/submissions/${encodeURIComponent(token)}?base64_encoded=false&fields=stdout,stderr`);
                     const outputText = await outputResponse.text();
 
                     if (!outputText || outputText.trim() === '') {

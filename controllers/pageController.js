@@ -29,7 +29,7 @@ export const getEditorPage = (req, res) => {
         const username = req.user?.username || 'Anonymous'
         const modifiedHtml = data.replace(
             '</head>',
-            `    <meta name="username" content="${username}">\n</head>`
+            `    <meta name="username" content="${username}">\n    <meta name="judge0-uri" content="${process.env.JUDGE0_URI}">\n</head>`
         )
 
         res.send(modifiedHtml)
